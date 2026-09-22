@@ -1,0 +1,66 @@
+{
+  "rules_id": "MIKO_STORY_RULES",
+  "version": "1.0",
+  "status": "CANONICAL",
+  "core_principle": "Simple + Fun + Meaningful",
+  "format": {
+    "default_duration_seconds": 45,
+    "range_seconds": [
+      30,
+      60
+    ],
+    "language": "id-ID",
+    "target_age": "3-8"
+  },
+  "narrative_rules": [
+    "One story = one main idea.",
+    "Miko must drive the story.",
+    "Use a clear beginning, small problem, solution and positive ending.",
+    "Use one main lesson only.",
+    "Visual action should carry more information than dialogue.",
+    "Dialogue must be short, natural and age-appropriate.",
+    "Humor is allowed when harmless and child-friendly.",
+    "Supporting characters assist but do not replace Miko.",
+    "The ending should provide emotional closure."
+  ],
+  "default_arc": {
+    "hook": "0-5 seconds",
+    "discovery": "5-15 seconds",
+    "action": "15-35 seconds",
+    "problem": "small and understandable",
+    "solution": "simple and achievable",
+    "ending": "happy ending or clear lesson"
+  },
+  "emotional_arc": [
+    "Curiosity",
+    "Excitement",
+    "Small Problem",
+    "Trying",
+    "Success",
+    "Happiness"
+  ],
+  "generation_output_requirements": [
+    "project_id",
+    "title",
+    "logline",
+    "main_value",
+    "duration",
+    "characters",
+    "locations",
+    "scenes",
+    "dialogue",
+    "narration",
+    "image_prompt",
+    "video_prompt"
+  ],
+  "pre_generation_checks": [
+    "Miko is the protagonist.",
+    "There is one main idea.",
+    "The story has a positive ending.",
+    "The value is clear.",
+    "The story is age-appropriate.",
+    "Every scene is necessary.",
+    "Every scene can be visualized.",
+    "The content is safe."
+  ]
+}

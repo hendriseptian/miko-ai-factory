@@ -1,0 +1,59 @@
+{
+  "qc_id": "MIKO_QC_CHECKLIST",
+  "version": "1.0",
+  "status": "CANONICAL",
+  "story": [
+    "Miko is the protagonist.",
+    "Miko's personality is consistent.",
+    "Supporting characters are appropriate.",
+    "There is one main idea.",
+    "Beginning, problem, solution and ending are clear.",
+    "The value is understandable.",
+    "Content is age-appropriate and safe."
+  ],
+  "image": [
+    "Orange-and-white fur is correct.",
+    "Large dark-brown eyes are correct.",
+    "Pink nose is correct.",
+    "Blue hoodie with white drawstrings is correct.",
+    "Paw-shaped pendant is present.",
+    "Miko has no shoes.",
+    "Body proportions are consistent.",
+    "Location, style and lighting match the world.",
+    "9:16 composition is correct.",
+    "No major artifacts, duplicate parts or face distortion."
+  ],
+  "video": [
+    "Miko remains visually consistent throughout the shot.",
+    "No clothing or body transformation.",
+    "Motion is natural and smooth.",
+    "Action matches the approved scene.",
+    "Camera movement is understandable.",
+    "No flicker or teleporting.",
+    "No major temporal artifacts."
+  ],
+  "audio": [
+    "Voice matches Miko's child-boy identity.",
+    "Indonesian pronunciation is clear.",
+    "Dialogue matches the scene.",
+    "No clipping or severe audio artifacts.",
+    "Music does not overpower speech.",
+    "Sound effects are appropriate."
+  ],
+  "final": [
+    "9:16 output.",
+    "Target resolution 1080x1920 where supported.",
+    "Correct duration.",
+    "Story is complete.",
+    "Hook is present.",
+    "Ending is complete.",
+    "Subtitle is correct if used.",
+    "No unwanted frames or technical corruption."
+  ],
+  "decision_values": [
+    "APPROVED",
+    "REJECTED",
+    "REGENERATE"
+  ],
+  "human_qc_is_final_authority": true
+}

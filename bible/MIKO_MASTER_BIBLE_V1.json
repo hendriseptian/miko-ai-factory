@@ -1,0 +1,154 @@
+{
+  "bible_id": "MIKO_MASTER_BIBLE",
+  "version": "1.0",
+  "status": "CANONICAL",
+  "last_updated": "2026-09-22",
+  "character": {
+    "name": "Miko",
+    "species": "young male kitten",
+    "visual_age": "approximately 4-6 years old child-like",
+    "target_audience": "children 3-8",
+    "appearance": {
+      "fur": "orange and white",
+      "eyes": "large expressive dark-brown eyes",
+      "nose": "small pink nose",
+      "head": "round and relatively large",
+      "body": "small, rounded, child-like proportions with short legs",
+      "clothing": {
+        "top": "bright blue hoodie",
+        "drawstrings": "white",
+        "pendant": "paw-shaped pendant",
+        "shoes": "none"
+      }
+    },
+    "personality": [
+      "curious",
+      "cheerful",
+      "kind",
+      "brave",
+      "playful",
+      "friendly",
+      "slightly clumsy",
+      "helpful",
+      "eager to learn"
+    ],
+    "voice_identity": {
+      "language": "Indonesian",
+      "character": "young boy",
+      "perceived_age": "approximately 5-7 years old",
+      "qualities": [
+        "cheerful",
+        "innocent",
+        "expressive",
+        "playful",
+        "natural",
+        "easy to understand"
+      ]
+    }
+  },
+  "story_world": {
+    "core_principle": "Simple + Fun + Meaningful",
+    "default_arc": [
+      "SEE_OR_DISCOVER",
+      "TRY",
+      "PROBLEM",
+      "SOLUTION",
+      "HAPPY_ENDING"
+    ],
+    "one_video_rule": "One main idea + one main event + one simple message.",
+    "genres": [
+      "Adventure",
+      "Funny",
+      "Friendship",
+      "Discovery",
+      "Learning",
+      "Helping Others",
+      "Animal Friends",
+      "Nature",
+      "Simple Problem Solving",
+      "Everyday Life",
+      "Imagination",
+      "Music & Play"
+    ],
+    "values": [
+      "Kindness",
+      "Sharing",
+      "Honesty",
+      "Courage",
+      "Patience",
+      "Curiosity",
+      "Helping Others",
+      "Respect",
+      "Cleanliness",
+      "Teamwork",
+      "Problem Solving",
+      "Learning from Mistakes",
+      "Responsibility",
+      "Empathy",
+      "Gratitude",
+      "Self-Confidence",
+      "Taking Care of Nature"
+    ]
+  },
+  "world_locations": [
+    "Miko's House",
+    "Rainbow Park",
+    "Sunny Forest",
+    "Sunny Beach",
+    "Little School",
+    "Playground",
+    "Flower Garden",
+    "Little Farm",
+    "Cloud Hill",
+    "Night Garden"
+  ],
+  "supporting_characters": [
+    "Lulu",
+    "Bobi",
+    "Kiki",
+    "Toto",
+    "Nana"
+  ],
+  "signature_objects": [
+    "yellow backpack with paw-print",
+    "paw-shaped pendant",
+    "teddy bear",
+    "ball"
+  ],
+  "visual_identity_rules": [
+    "Miko must remain recognizable across all scenes.",
+    "Core fur, eye, body, hoodie, pendant and shoe rules must not change.",
+    "Pose, facial expression, action, camera, lighting and environment may change.",
+    "Supporting characters must not replace Miko as the protagonist.",
+    "The world must feel colorful, safe, playful and consistent."
+  ],
+  "safety_rules": [
+    "No violence.",
+    "No horror or disturbing imagery.",
+    "No adult or sexual themes.",
+    "No hate or profanity.",
+    "No dangerous imitation or challenge content.",
+    "No weapons.",
+    "No graphic injury or blood."
+  ],
+  "production_rules": {
+    "default_duration_seconds": 45,
+    "allowed_duration_range_seconds": [
+      30,
+      60
+    ],
+    "aspect_ratio": "9:16",
+    "target_resolution": "1080x1920",
+    "primary_language": "id-ID",
+    "human_qc_is_final_authority": true
+  },
+  "canonical_priority": [
+    "MIKO_MASTER_BIBLE",
+    "MIKO_MASTER_REFERENCE",
+    "MIKO_VISUAL_STYLE_BIBLE",
+    "CHARACTER_REFERENCE_IMAGE",
+    "WORLD_LOCATION_REFERENCE",
+    "SCENE_PROMPT",
+    "GENERATOR_SETTINGS"
+  ]
+}

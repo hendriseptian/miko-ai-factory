@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Miko Project",
+  "type": "object",
+  "required": [
+    "project_id",
+    "status",
+    "created_at",
+    "story"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "pattern": "^MIKO-[0-9]{4,}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "IDEA",
+        "STORY_GENERATING",
+        "STORY_REVIEW",
+        "STORY_APPROVED",
+        "IMAGE_GENERATING",
+        "IMAGE_REVIEW",
+        "VIDEO_GENERATING",
+        "VIDEO_REVIEW",
+        "AUDIO_GENERATING",
+        "ASSEMBLING",
+        "AI_QC",
+        "HUMAN_QC",
+        "REJECTED",
+        "APPROVED",
+        "ARCHIVED"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "story": {
+      "$ref": "story.schema.json"
+    },
+    "qc": {
+      "$ref": "qc.schema.json"
+    }
+  }
+}

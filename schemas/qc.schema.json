@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Miko QC",
+  "type": "object",
+  "required": [
+    "project_id",
+    "final_decision",
+    "reviewer",
+    "notes"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "story": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "N/A"
+      ]
+    },
+    "character": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "N/A"
+      ]
+    },
+    "visual": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "N/A"
+      ]
+    },
+    "animation": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "N/A"
+      ]
+    },
+    "voice": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "N/A"
+      ]
+    },
+    "music": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "N/A"
+      ]
+    },
+    "subtitle": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "N/A"
+      ]
+    },
+    "technical": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "N/A"
+      ]
+    },
+    "final_decision": {
+      "type": "string",
+      "enum": [
+        "APPROVED",
+        "REJECTED",
+        "REGENERATE"
+      ]
+    },
+    "reviewer": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

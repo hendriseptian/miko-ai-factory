@@ -1,0 +1,8 @@
+[project]
+name = "miko-ai-factory-worker"
+version = "0.1.0"
+description = "Cloudflare Python Worker orchestrator for Miko AI Video Factory"
+requires-python = ">=3.12"
+dependencies = [
+  "workers-py"
+]

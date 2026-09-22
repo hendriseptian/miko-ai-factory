@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Miko Video Asset",
+  "type": "object",
+  "required": [
+    "project_id",
+    "scene_id",
+    "version",
+    "provider",
+    "model",
+    "prompt",
+    "status"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "scene_id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "provider": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "image_input": {
+      "type": "string"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 60
+    },
+    "aspect_ratio": {
+      "type": "string",
+      "const": "9:16"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "output_path": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "GENERATING",
+        "READY",
+        "APPROVED",
+        "REJECTED",
+        "ARCHIVED"
+      ]
+    }
+  }
+}

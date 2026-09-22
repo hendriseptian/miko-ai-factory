@@ -1,0 +1,81 @@
+{
+  "style_id": "MIKO_VISUAL_STYLE_BIBLE",
+  "version": "1.0",
+  "status": "CANONICAL",
+  "style_name": "Polished Stylized 3D Children's Animation",
+  "visual_language": {
+    "overall": [
+      "polished",
+      "stylized 3D",
+      "warm",
+      "cheerful",
+      "colorful",
+      "soft",
+      "friendly",
+      "playful",
+      "high-quality",
+      "child-friendly"
+    ],
+    "lighting": {
+      "preferred": [
+        "soft warm lighting",
+        "gentle highlights",
+        "readable faces"
+      ],
+      "avoid": [
+        "extreme darkness",
+        "horror lighting",
+        "harsh dramatic shadows"
+      ]
+    },
+    "camera": {
+      "preferred_shots": [
+        "wide",
+        "medium-wide",
+        "medium",
+        "close-up"
+      ],
+      "movement": [
+        "smooth",
+        "gentle",
+        "playful",
+        "easy to follow"
+      ],
+      "composition": "Keep Miko readable and visually prominent."
+    },
+    "animation": {
+      "motion": [
+        "smooth",
+        "expressive",
+        "playful",
+        "child-like"
+      ],
+      "avoid": [
+        "flicker",
+        "body deformation",
+        "teleporting",
+        "unmotivated rapid motion"
+      ]
+    },
+    "world": {
+      "description": "Colorful, familiar, safe, playful and lightly magical.",
+      "consistency_rule": "All locations should feel like they belong to the same Miko universe."
+    }
+  },
+  "technical": {
+    "aspect_ratio": "9:16",
+    "target_resolution": "1080x1920",
+    "frame_rate_preference": "provider-dependent",
+    "safe_text_area": true
+  },
+  "quality_exclusions": [
+    "visual flicker",
+    "duplicated body parts",
+    "distorted anatomy",
+    "face deformation",
+    "unwanted text",
+    "unwanted watermark",
+    "broken proportions",
+    "character identity drift"
+  ]
+}

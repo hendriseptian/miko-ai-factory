@@ -1,0 +1,56 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, sans-serif;
+  background: #0b0d12;
+  color: #f5f7fb;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #0b0d12; }
+.topbar {
+  padding: 28px 32px;
+  border-bottom: 1px solid #20242e;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+}
+.eyebrow { font-size: 12px; letter-spacing: .18em; opacity: .65; }
+h1 { margin: 6px 0; font-size: 30px; }
+p { opacity: .72; }
+.status {
+  border: 1px solid #303746;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+  display: grid;
+  gap: 20px;
+}
+.card {
+  background: #12161e;
+  border: 1px solid #242a35;
+  border-radius: 16px;
+  padding: 22px;
+}
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 16px;
+  cursor: pointer;
+  background: #f5f7fb;
+  color: #0b0d12;
+  font-weight: 700;
+}
+.qc-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #20242e;
+}
+.pass { color: #8be28b; }
+.pending { color: #f2c86b; }

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Miko Story",
+  "type": "object",
+  "required": [
+    "project_id",
+    "title",
+    "logline",
+    "main_value",
+    "target_age",
+    "language",
+    "duration_target",
+    "characters",
+    "locations",
+    "scenes",
+    "status"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "logline": {
+      "type": "string"
+    },
+    "main_value": {
+      "type": "string"
+    },
+    "target_age": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "duration_target": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 60
+    },
+    "characters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "locations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "$ref": "scene.schema.json"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "REVIEW",
+        "APPROVED",
+        "REJECTED"
+      ]
+    }
+  }
+}
