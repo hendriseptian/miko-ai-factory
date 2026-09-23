@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Miko AI Factory — Scene Image Test</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b1020;
+      color: #e8ecf5;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 18px 50px;
+    }
+    h1 { margin: 0 0 6px; font-size: 28px; }
+    .sub { color: #9aa6bd; margin-bottom: 24px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .card {
+      background: #121a2d;
+      border: 1px solid #26324b;
+      border-radius: 14px;
+      padding: 18px;
+    }
+    label {
+      display: block;
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: #aeb9ce;
+    }
+    textarea, input, select {
+      width: 100%;
+      border: 1px solid #33415f;
+      background: #0b1020;
+      color: #e8ecf5;
+      border-radius: 9px;
+      padding: 11px;
+      font: inherit;
+    }
+    textarea { min-height: 250px; resize: vertical; }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    button {
+      margin-top: 14px;
+      width: 100%;
+      border: 0;
+      border-radius: 9px;
+      padding: 12px 16px;
+      background: #4f8cff;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .55; cursor: wait; }
+    .status {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #0b1020;
+      color: #aeb9ce;
+      white-space: pre-wrap;
+    }
+    .image-box {
+      min-height: 520px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #080c16;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .image-box img {
+      display: block;
+      width: 100%;
+      max-height: 760px;
+      object-fit: contain;
+    }
+    .placeholder { color: #65728a; padding: 30px; text-align: center; }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #cbd5e7;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .full { margin-top: 18px; }
+    @media (max-width: 800px) {
+      .grid { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+      .image-box { min-height: 380px; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Miko AI Factory — Scene → Image Test</h1>
+  <div class="sub">V0.4.0 · Story → Scene Engine → Image Engine</div>
+
+  <div class="grid">
+    <section class="card">
+      <label for="storyIdea">Story Idea</label>
+      <textarea id="storyIdea">Miko menemukan bunga kecil yang hampir layu di taman dan mencoba menolongnya.</textarea>
+
+      <div class="row">
+        <div>
+          <label for="sceneId">Scene</label>
+          <select id="sceneId">
+            <option value="SCENE-01">SCENE-01</option>
+            <option value="SCENE-02">SCENE-02</option>
+            <option value="SCENE-03">SCENE-03</option>
+            <option value="SCENE-04">SCENE-04</option>
+            <option value="SCENE-05">SCENE-05</option>
+          </select>
+        </div>
+        <div>
+          <label for="language">Language</label>
+          <select id="language">
+            <option value="id-ID">id-ID</option>
+            <option value="en-US">en-US</option>
+          </select>
+        </div>
+        <div>
+          <label for="duration">Duration</label>
+          <input id="duration" type="number" value="45" min="20" max="60">
+        </div>
+      </div>
+
+      <button id="runBtn">GENERATE SCENE IMAGE</button>
+      <div id="status" class="status">Ready.</div>
+    </section>
+
+    <section class="card">
+      <label>Generated Image</label>
+      <div id="imageBox" class="image-box">
+        <div class="placeholder">No image generated yet.</div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card full">
+    <label>Result Summary</label>
+    <pre id="summary">No result yet.</pre>
+  </section>
+
+  <section class="card full">
+    <label>Image Prompt Used</label>
+    <pre id="prompt">No prompt yet.</pre>
+  </section>
+</div>
+
+<script>
+const API_BASE = "https://miko-ai-factory.side-gs78.workers.dev";
+
+const storyIdea = document.getElementById("storyIdea");
+const sceneId = document.getElementById("sceneId");
+const language = document.getElementById("language");
+const duration = document.getElementById("duration");
+const runBtn = document.getElementById("runBtn");
+const statusBox = document.getElementById("status");
+const imageBox = document.getElementById("imageBox");
+const summaryBox = document.getElementById("summary");
+const promptBox = document.getElementById("prompt");
+
+function setStatus(text) {
+  statusBox.textContent = text;
+}
+
+function showImage(result) {
+  imageBox.innerHTML = "";
+
+  if (!result || !result.image_data) {
+    imageBox.innerHTML = '<div class="placeholder">Image data was not returned.</div>';
+    return;
+  }
+
+  const img = document.createElement("img");
+  img.alt = "Generated Miko scene";
+  img.src = `data:${result.mime_type || "image/jpeg"};base64,${result.image_data}`;
+  imageBox.appendChild(img);
+}
+
+function showSummary(data, story, selectedSceneId) {
+  const result = data?.image || {};
+
+  const summary = {
+    success: data?.success === true,
+    project_id: data?.project_id || story?.project_id || "-",
+    title: data?.title || story?.title || "-",
+    scene_id: data?.scene_id || selectedSceneId,
+    scene_sequence: data?.scene_sequence ?? "-",
+    scene_duration: data?.scene_duration ?? "-",
+    status: result.status || "-",
+    provider: result.provider || "-",
+    model: result.model || "-",
+    mime_type: result.mime_type || "-",
+    aspect_ratio: result.aspect_ratio || "-",
+    image_size: result.image_size || "-",
+    image_data: result.image_data ? "[BASE64 IMAGE DATA HIDDEN]" : "[not returned]"
+  };
+
+  summaryBox.textContent = JSON.stringify(summary, null, 2);
+  promptBox.textContent =
+    data?.scene?.image_prompt_v1 ||
+    data?.scene?.image_prompt ||
+    "[prompt not returned]";
+}
+
+async function generateStory() {
+  const response = await fetch(`${API_BASE}/api/story/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      idea: storyIdea.value.trim(),
+      language: language.value,
+      duration: Number(duration.value)
+    })
+  });
+
+  const text = await response.text();
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Story API returned non-JSON (${response.status}).`);
+  }
+
+  if (!response.ok || data.success === false) {
+    throw new Error(
+      data.error ||
+      data.message ||
+      `Story generation failed (${response.status}).`
+    );
+  }
+
+  return data.story || data;
+}
+
+async function generateSceneImage(story) {
+  const response = await fetch(`${API_BASE}/api/image/scene`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      story,
+      scene_id: sceneId.value,
+      provider: "huggingface",
+      aspect_ratio: "9:16"
+    })
+  });
+
+  const text = await response.text();
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Scene Image API returned non-JSON (${response.status}).`);
+  }
+
+  if (!response.ok || data.success === false) {
+    throw new Error(
+      data.error ||
+      data.message ||
+      `Scene image generation failed (${response.status}).`
+    );
+  }
+
+  return data;
+}
+
+runBtn.addEventListener("click", async () => {
+  runBtn.disabled = true;
+  imageBox.innerHTML = '<div class="placeholder">Generating...</div>';
+  summaryBox.textContent = "Generating...";
+  promptBox.textContent = "Generating...";
+  setStatus("1/2 Generating story with Story Engine...");
+
+  try {
+    const story = await generateStory();
+
+    setStatus(
+      `Story generated: ${story.title || "Untitled"}\n` +
+      `Scenes: ${(story.scenes || []).length}\n\n` +
+      `2/2 Generating ${sceneId.value} image with Image Engine...`
+    );
+
+    const result = await generateSceneImage(story);
+
+    showImage(result.image);
+    showSummary(result, story, sceneId.value);
+
+    setStatus(
+      `SUCCESS\n` +
+      `Project: ${result.project_id || story.project_id || "-"}\n` +
+      `Scene: ${result.scene_id || sceneId.value}\n` +
+      `Provider: ${result.image?.provider || "-"}\n` +
+      `Model: ${result.image?.model || "-"}`
+    );
+  } catch (error) {
+    console.error(error);
+    imageBox.innerHTML = '<div class="placeholder">Generation failed.</div>';
+    summaryBox.textContent = String(error.message || error);
+    promptBox.textContent = "No prompt available.";
+    setStatus(`ERROR\n${error.message || error}`);
+  } finally {
+    runBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
