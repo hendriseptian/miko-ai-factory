@@ -11,7 +11,8 @@ class HuggingFaceImageProvider(ImageProvider):
     Hugging Face Inference Provider
     for Miko image generation.
 
-    Uses automatic provider routing.
+    Uses FLUX.1-schnell through
+    Hugging Face Inference Providers.
     """
 
     name = "huggingface"
@@ -30,6 +31,12 @@ class HuggingFaceImageProvider(ImageProvider):
             env,
             "HUGGINGFACE_IMAGE_MODEL",
             "black-forest-labs/FLUX.1-schnell"
+        )
+
+        self.provider = getattr(
+            env,
+            "HUGGINGFACE_IMAGE_PROVIDER",
+            "fal-ai"
         )
 
         self.base_url = (
@@ -72,12 +79,6 @@ class HuggingFaceImageProvider(ImageProvider):
             height = 1024
 
         # ==========================================
-        # IMAGE PROMPT
-        # ==========================================
-
-        final_prompt = prompt
-
-        # ==========================================
         # ENDPOINT
         # ==========================================
 
@@ -91,7 +92,8 @@ class HuggingFaceImageProvider(ImageProvider):
         # ==========================================
 
         payload = {
-            "inputs": final_prompt,
+
+            "inputs": prompt,
 
             "parameters": {
 
@@ -102,6 +104,27 @@ class HuggingFaceImageProvider(ImageProvider):
                 "num_inference_steps": 4
 
             }
+
+        }
+
+        # ==========================================
+        # HEADERS
+        # ==========================================
+
+        headers = {
+
+            "Authorization":
+                f"Bearer {self.api_key}",
+
+            "Content-Type":
+                "application/json",
+
+            "Accept":
+                "image/png",
+
+            "X-Provider":
+                self.provider
+
         }
 
         # ==========================================
@@ -114,18 +137,7 @@ class HuggingFaceImageProvider(ImageProvider):
 
             method="POST",
 
-            headers={
-
-                "Authorization":
-                    f"Bearer {self.api_key}",
-
-                "Content-Type":
-                    "application/json",
-
-                "Accept":
-                    "image/png"
-
-            },
+            headers=headers,
 
             body=json.dumps(
                 payload,
@@ -151,7 +163,7 @@ class HuggingFaceImageProvider(ImageProvider):
             )
 
         # ==========================================
-        # READ IMAGE BYTES
+        # IMAGE BYTES
         # ==========================================
 
         image_buffer = (
@@ -165,7 +177,7 @@ class HuggingFaceImageProvider(ImageProvider):
             )
 
         # ==========================================
-        # CONVERT TO BASE64
+        # BASE64
         # ==========================================
 
         image_data = base64.b64encode(
@@ -177,10 +189,13 @@ class HuggingFaceImageProvider(ImageProvider):
         # ==========================================
 
         mime_type = (
+
             response.headers.get(
                 "content-type"
             )
+
             or "image/png"
+
         )
 
         mime_type = mime_type.split(
@@ -199,6 +214,9 @@ class HuggingFaceImageProvider(ImageProvider):
 
             "model":
                 self.model,
+
+            "provider_backend":
+                self.provider,
 
             "mime_type":
                 mime_type,
