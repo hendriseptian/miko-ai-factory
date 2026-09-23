@@ -7,6 +7,7 @@ from engine.story_engine import StoryEngine
 from engine.scene_engine import SceneEngine
 from providers.gemini import GeminiProvider
 from providers.image.gemini_image import GeminiImageProvider
+from providers.image.huggingface_image import HuggingFaceImageProvider
 
 
 class Default(WorkerEntrypoint):
@@ -144,9 +145,28 @@ class Default(WorkerEntrypoint):
                 "Field 'prompt' is required."
             )
 
-        provider = GeminiImageProvider(
-            self.env
+        provider_name = data.get(
+            "provider",
+            "huggingface"
         )
+
+        if provider_name == "gemini":
+
+            provider = GeminiImageProvider(
+                self.env
+            )
+
+        elif provider_name == "huggingface":
+
+            provider = HuggingFaceImageProvider(
+                self.env
+            )
+
+        else:
+
+            raise ValueError(
+                f"Unsupported image provider: {provider_name}"
+            )
 
         result = await provider.generate(
             prompt=prompt,
