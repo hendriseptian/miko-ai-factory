@@ -182,6 +182,45 @@ class HuggingFaceImageProvider(ImageProvider):
             },
         }
 
+    async def _read_response_bytes(self, response):
+        """
+        Read a Cloudflare Fetch Response body in Python Workers.
+
+        The workers-py Response exposes the Fetch body as a JavaScript
+        ReadableStream. Each chunk is a Uint8Array and Pyodide exposes
+        to_bytes() for converting it to Python bytes.
+        """
+
+        body = response.body
+
+        if body is None:
+            raise RuntimeError("Response body is empty.")
+
+        reader = body.getReader()
+        chunks = []
+
+        try:
+            while True:
+                result = await reader.read()
+
+                if result.done:
+                    break
+
+                value = result.value
+
+                if value is not None:
+                    chunks.append(value.to_bytes())
+        finally:
+            try:
+                reader.releaseLock()
+            except Exception:
+                pass
+
+        if not chunks:
+            raise RuntimeError("Response body is empty.")
+
+        return b"".join(chunks)
+
     async def _download_image_url(self, image_url):
         image_response = await fetch(
             image_url,
@@ -199,7 +238,7 @@ class HuggingFaceImageProvider(ImageProvider):
                 f"{image_response.status}: {error_text}"
             )
 
-        image_buffer = await image_response.arrayBuffer()
+        image_buffer = await self._read_response_bytes(image_response)
 
         if not image_buffer:
             raise RuntimeError(
@@ -238,7 +277,7 @@ class HuggingFaceImageProvider(ImageProvider):
         ).lower()
 
         if content_type.startswith("image/"):
-            image_buffer = await response.arrayBuffer()
+            image_buffer = await self._read_response_bytes(response)
 
             if not image_buffer:
                 raise RuntimeError(
