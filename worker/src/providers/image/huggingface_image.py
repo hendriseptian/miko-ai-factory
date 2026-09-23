@@ -41,7 +41,6 @@ class HuggingFaceImageProvider(ImageProvider):
 
         self.base_url = (
             "https://router.huggingface.co"
-            "/hf-inference/models/"
         )
 
     async def generate(
@@ -83,9 +82,10 @@ class HuggingFaceImageProvider(ImageProvider):
         # ==========================================
 
         url = (
-            f"{self.base_url}"
-            f"{self.model}"
-        )
+           f"{self.base_url}"
+           f"/fal-ai/models/"
+           f"{self.model}"
+       )
 
         # ==========================================
         # REQUEST PAYLOAD
