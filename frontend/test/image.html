@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Miko AI Factory - Image Engine Test</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 30px;
+            background: #0f1117;
+            color: #e8ecf3;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #9da7b8;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: #181c25;
+            border: 1px solid #292f3b;
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            background: #0f1117;
+            color: #ffffff;
+            border: 1px solid #343b49;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 220px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #4f8cff;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #3979ed;
+        }
+
+        button:disabled {
+            background: #3a4050;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #11151d;
+            color: #aeb8c8;
+            white-space: pre-wrap;
+        }
+
+        .result {
+            display: grid;
+            grid-template-columns: minmax(280px, 450px) 1fr;
+            gap: 25px;
+            align-items: start;
+        }
+
+        .image-container {
+            background: #0b0d12;
+            border: 1px solid #292f3b;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            min-height: 300px;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            max-height: 700px;
+            border-radius: 8px;
+            display: none;
+            margin: 0 auto;
+        }
+
+        .placeholder {
+            color: #667085;
+            padding: 100px 20px;
+        }
+
+        pre {
+            background: #0b0d12;
+            border: 1px solid #292f3b;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .meta-box {
+            background: #11151d;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .meta-label {
+            font-size: 11px;
+            color: #7f8999;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 800px) {
+
+            body {
+                padding: 15px;
+            }
+
+            .row,
+            .result {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>🎨 Miko AI Factory</h1>
+
+    <div class="subtitle">
+        Image Generation Engine V1 Test
+    </div>
+
+
+    <!-- INPUT -->
+
+    <div class="card">
+
+        <h2>SCENE-01 Image Generation</h2>
+
+        <div class="row">
+
+            <div>
+
+                <label for="projectId">
+                    Project ID
+                </label>
+
+                <input
+                    id="projectId"
+                    value="MIKO-0001"
+                >
+
+            </div>
+
+
+            <div>
+
+                <label for="sceneId">
+                    Scene ID
+                </label>
+
+                <input
+                    id="sceneId"
+                    value="SCENE-01"
+                >
+
+            </div>
+
+        </div>
+
+
+        <div class="row">
+
+            <div>
+
+                <label for="aspectRatio">
+                    Aspect Ratio
+                </label>
+
+                <select id="aspectRatio">
+
+                    <option value="9:16">
+                        9:16
+                    </option>
+
+                    <option value="16:9">
+                        16:9
+                    </option>
+
+                    <option value="1:1">
+                        1:1
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div>
+
+                <label for="imageSize">
+                    Image Size
+                </label>
+
+                <input
+                    value="1K"
+                    disabled
+                >
+
+            </div>
+
+        </div>
+
+
+        <label for="prompt">
+            Image Prompt
+        </label>
+
+        <textarea id="prompt">CHARACTER LOCK:
+
+Miko is a young male orange-and-white kitten,
+visual age approximately 4-6 years old,
+with large expressive dark brown eyes,
+a pink nose,
+a round relatively large head,
+a small rounded body,
+short legs,
+and soft orange-and-white fur.
+
+Miko wears a bright blue hoodie with white drawstrings
+and a paw-shaped pendant.
+
+Miko does not wear shoes.
+
+Miko is cheerful, curious, kind, playful,
+friendly, brave, slightly clumsy, and helpful.
+
+
+VISUAL STYLE:
+
+Polished stylized 3D children's animation.
+
+Colorful, warm, cheerful, safe, playful,
+soft rounded shapes, expressive character design,
+soft cinematic lighting, clean composition,
+high visual clarity, child-friendly environment.
+
+Target audience: children aged 3-8.
+
+Vertical composition, 9:16 aspect ratio.
+
+
+SCENE:
+
+Location: Rainbow Park
+
+Characters: Miko
+
+Action:
+
+Miko walks happily through a colorful sunny flower park
+wearing his bright blue hoodie and paw-shaped pendant.
+He notices something interesting on the ground
+and stops to look down with a curious expression.
+
+
+IMAGE REQUIREMENTS:
+
+Create one clear vertical 9:16 production frame.
+
+Show Miko clearly in the foreground.
+
+Show Rainbow Park with colorful flowers
+and a bright sunny atmosphere in the background.
+
+Keep Miko's character identity consistent.
+
+Do not introduce unnecessary characters.
+
+Do not redesign Miko.
+
+Do not add text, subtitles, logos, watermark,
+or UI elements.
+
+Create a clean, child-friendly composition
+suitable as the starting frame for image-to-video generation.</textarea>
+
+
+        <br><br>
+
+        <button
+            id="generateButton"
+            onclick="generateImage()"
+        >
+            🎨 Generate SCENE-01
+        </button>
+
+
+        <div
+            id="status"
+            class="status"
+        >
+            Ready.
+        </div>
+
+    </div>
+
+
+    <!-- RESULT -->
+
+    <div class="card">
+
+        <h2>Generated Image</h2>
+
+        <div class="result">
+
+            <div class="image-container">
+
+                <div
+                    id="placeholder"
+                    class="placeholder"
+                >
+                    Generated image will appear here.
+                </div>
+
+                <img
+                    id="generatedImage"
+                    alt="Generated Miko Scene"
+                >
+
+            </div>
+
+
+            <div>
+
+                <div class="meta">
+
+                    <div class="meta-box">
+
+                        <div class="meta-label">
+                            PROVIDER
+                        </div>
+
+                        <div
+                            id="provider"
+                            class="meta-value"
+                        >
+                            -
+                        </div>
+
+                    </div>
+
+
+                    <div class="meta-box">
+
+                        <div class="meta-label">
+                            MODEL
+                        </div>
+
+                        <div
+                            id="model"
+                            class="meta-value"
+                        >
+                            -
+                        </div>
+
+                    </div>
+
+
+                    <div class="meta-box">
+
+                        <div class="meta-label">
+                            ASPECT RATIO
+                        </div>
+
+                        <div
+                            id="ratio"
+                            class="meta-value"
+                        >
+                            -
+                        </div>
+
+                    </div>
+
+
+                    <div class="meta-box">
+
+                        <div class="meta-label">
+                            IMAGE SIZE
+                        </div>
+
+                        <div
+                            id="size"
+                            class="meta-value"
+                        >
+                            -
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <h3>API Response</h3>
+
+                <pre id="output">Waiting...</pre>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const API_URL =
+    "https://miko-ai-factory.side-gs78.workers.dev";
+
+
+async function generateImage() {
+
+    const button =
+        document.getElementById(
+            "generateButton"
+        );
+
+    const status =
+        document.getElementById(
+            "status"
+        );
+
+    const output =
+        document.getElementById(
+            "output"
+        );
+
+    const image =
+        document.getElementById(
+            "generatedImage"
+        );
+
+    const placeholder =
+        document.getElementById(
+            "placeholder"
+        );
+
+
+    const projectId =
+        document.getElementById(
+            "projectId"
+        ).value.trim();
+
+
+    const sceneId =
+        document.getElementById(
+            "sceneId"
+        ).value.trim();
+
+
+    const prompt =
+        document.getElementById(
+            "prompt"
+        ).value.trim();
+
+
+    const aspectRatio =
+        document.getElementById(
+            "aspectRatio"
+        ).value;
+
+
+    if (!prompt) {
+
+        status.textContent =
+            "❌ Image prompt is required.";
+
+        return;
+    }
+
+
+    button.disabled = true;
+
+    button.textContent =
+        "⏳ Generating...";
+
+
+    status.textContent =
+        "Sending request to Gemini Image Engine...";
+
+
+    output.textContent =
+        "Waiting for response...";
+
+
+    image.style.display =
+        "none";
+
+    placeholder.style.display =
+        "block";
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/api/image/generate`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        project_id:
+                            projectId,
+
+                        scene_id:
+                            sceneId,
+
+                        prompt:
+                            prompt,
+
+                        aspect_ratio:
+                            aspectRatio,
+
+                        reference_images:
+                            []
+
+                    })
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        output.textContent =
+            JSON.stringify(
+                data,
+                null,
+                2
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.message ||
+                "Image generation failed."
+            );
+
+        }
+
+
+        if (
+            !data.success ||
+            !data.image
+        ) {
+
+            throw new Error(
+                "Invalid image response."
+            );
+
+        }
+
+
+        const result =
+            data.image;
+
+
+        document.getElementById(
+            "provider"
+        ).textContent =
+            result.provider || "-";
+
+
+        document.getElementById(
+            "model"
+        ).textContent =
+            result.model || "-";
+
+
+        document.getElementById(
+            "ratio"
+        ).textContent =
+            result.aspect_ratio || "-";
+
+
+        document.getElementById(
+            "size"
+        ).textContent =
+            result.image_size || "-";
+
+
+        if (!result.image_data) {
+
+            throw new Error(
+                "Image data was not returned."
+            );
+
+        }
+
+
+        image.src =
+            `data:${result.mime_type};base64,${result.image_data}`;
+
+
+        image.onload =
+            function () {
+
+                image.style.display =
+                    "block";
+
+                placeholder.style.display =
+                    "none";
+
+                status.textContent =
+                    "✅ Image generated successfully.";
+
+            };
+
+
+        image.onerror =
+            function () {
+
+                status.textContent =
+                    "⚠️ Image data was received, but the browser could not display it.";
+
+            };
+
+
+    }
+    catch (error) {
+
+        console.error(
+            error
+        );
+
+
+        status.textContent =
+            "❌ " +
+            error.message;
+
+
+        output.textContent +=
+            "\n\nERROR:\n" +
+            error.message;
+
+    }
+    finally {
+
+        button.disabled =
+            false;
+
+        button.textContent =
+            "🎨 Generate SCENE-01";
+
+    }
+
+}
+
+</script>
+
+</body>
+
+</html>
