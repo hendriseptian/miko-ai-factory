@@ -1,12 +1,19 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Miko AI Factory - Scene Test</title>
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Miko AI Factory - Story Test</title>
 
     <style>
+
         * {
             box-sizing: border-box;
         }
@@ -19,8 +26,8 @@
         }
 
         .container {
-            max-width: 1000px;
-            margin: 40px auto;
+            max-width: 900px;
+            margin: 50px auto;
             padding: 20px;
         }
 
@@ -28,22 +35,47 @@
             background: white;
             border-radius: 16px;
             padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
         }
 
         h1 {
             margin-top: 0;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            background: #eef2ff;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
         }
 
         textarea {
             width: 100%;
-            min-height: 420px;
-            padding: 15px;
+            min-height: 120px;
+            padding: 14px;
             border: 1px solid #d1d5db;
             border-radius: 10px;
-            font-family: monospace;
-            font-size: 13px;
             resize: vertical;
+            font-size: 15px;
+            font-family: Arial, sans-serif;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #2563eb;
         }
 
         button {
@@ -76,8 +108,11 @@
             overflow-x: auto;
             white-space: pre-wrap;
             word-break: break-word;
+            min-height: 80px;
         }
+
     </style>
+
 </head>
 
 <body>
@@ -86,16 +121,29 @@
 
     <div class="card">
 
-        <h1>🎬 Miko Scene Engine</h1>
+        <h1>🐱 Miko AI Factory</h1>
 
-        <p>
-            Story → Production Scene Test
-        </p>
+        <div class="subtitle">
+            Story Engine V1 Test
+        </div>
 
-        <textarea id="storyInput"></textarea>
+        <div class="status">
 
-        <button id="processBtn">
-            🎬 Process Scenes
+            Worker:
+            <strong>
+                miko-ai-factory.side-gs78.workers.dev
+            </strong>
+
+        </div>
+
+        <label for="idea">
+            Story Idea
+        </label>
+
+        <textarea id="idea">Miko menemukan bunga kecil yang hampir layu di taman dan mencoba menolongnya.</textarea>
+
+        <button id="generateBtn">
+            ✨ Generate Story
         </button>
 
         <pre id="result">Hasil akan muncul di sini...</pre>
@@ -104,172 +152,81 @@
 
 </div>
 
+
 <script>
 
 const API_URL =
-    "https://miko-ai-factory.side-gs78.workers.dev/api/scene/process";
+    "https://miko-ai-factory.side-gs78.workers.dev/api/story/generate";
 
-const storyInput =
-    document.getElementById("storyInput");
 
 const button =
-    document.getElementById("processBtn");
+    document.getElementById("generateBtn");
+
+const ideaInput =
+    document.getElementById("idea");
 
 const result =
     document.getElementById("result");
 
 
-const sampleStory = {
-    project_id: "MIKO-0001",
-    title: "Miko dan Bunga Kecil",
-    language: "id-ID",
-    duration_target: 45,
-
-    scenes: [
-
-        {
-            scene_id: "SCENE-01",
-            sequence: 1,
-            duration: 5,
-            location: "Rainbow Park",
-            characters: ["Miko"],
-            action:
-                "Miko berjalan dengan ceria di taman bunga lalu berhenti melihat sebuah bunga kecil.",
-            dialogue:
-                "Wah, hari yang cerah!",
-            narration:
-                "Miko sedang bermain di taman yang indah.",
-            image_prompt: "",
-            video_prompt: "",
-            reference_assets: [
-                "MIKO_MASTER_BIBLE",
-                "Rainbow Park"
-            ],
-            image_status: "PENDING",
-            video_status: "PENDING"
-        },
-
-        {
-            scene_id: "SCENE-02",
-            sequence: 2,
-            duration: 8,
-            location: "Rainbow Park",
-            characters: ["Miko"],
-            action:
-                "Miko berlutut dan melihat bunga kecil berwarna kuning yang terkulai.",
-            dialogue:
-                "Eh? Kenapa bunganya menunduk?",
-            narration:
-                "Miko melihat sebuah bunga kecil yang hampir layu.",
-            image_prompt: "",
-            video_prompt: "",
-            reference_assets: [
-                "MIKO_MASTER_BIBLE"
-            ],
-            image_status: "PENDING",
-            video_status: "PENDING"
-        },
-
-        {
-            scene_id: "SCENE-03",
-            sequence: 3,
-            duration: 12,
-            location: "Rainbow Park",
-            characters: ["Miko"],
-            action:
-                "Miko mengambil penyiram tanaman kecil lalu menyiram bunga dengan hati-hati.",
-            dialogue:
-                "Tunggu sebentar ya, aku ambilkan air!",
-            narration:
-                "Miko mengambil air untuk menolong bunga itu.",
-            image_prompt: "",
-            video_prompt: "",
-            reference_assets: [
-                "MIKO_MASTER_BIBLE"
-            ],
-            image_status: "PENDING",
-            video_status: "PENDING"
-        },
-
-        {
-            scene_id: "SCENE-04",
-            sequence: 4,
-            duration: 10,
-            location: "Rainbow Park",
-            characters: ["Miko"],
-            action:
-                "Bunga kecil perlahan kembali tegak dan segar. Miko tersenyum lega.",
-            dialogue:
-                "Hore! Bunganya sudah segar lagi!",
-            narration:
-                "Perlahan, bunga itu kembali segar.",
-            image_prompt: "",
-            video_prompt: "",
-            reference_assets: [
-                "MIKO_MASTER_BIBLE"
-            ],
-            image_status: "PENDING",
-            video_status: "PENDING"
-        },
-
-        {
-            scene_id: "SCENE-05",
-            sequence: 5,
-            duration: 10,
-            location: "Rainbow Park",
-            characters: ["Miko"],
-            action:
-                "Miko duduk di samping bunga yang sudah segar dan melambaikan tangan ke kamera.",
-            dialogue:
-                "Menolong itu menyenangkan!",
-            narration:
-                "Merawat makhluk hidup adalah hal yang baik.",
-            image_prompt: "",
-            video_prompt: "",
-            reference_assets: [
-                "MIKO_MASTER_BIBLE"
-            ],
-            image_status: "PENDING",
-            video_status: "PENDING"
-        }
-
-    ]
-};
-
-
-storyInput.value =
-    JSON.stringify(sampleStory, null, 2);
-
-
 button.addEventListener("click", async () => {
 
+    const idea =
+        ideaInput.value.trim();
+
+
+    if (!idea) {
+
+        result.textContent =
+            "Masukkan story idea terlebih dahulu.";
+
+        return;
+    }
+
+
     button.disabled = true;
-    button.textContent = "Processing...";
+
+    button.textContent =
+        "Generating...";
+
     result.textContent =
-        "Mengirim Story JSON ke Scene Engine...";
+        "Menghubungi Miko Story Engine...";
+
 
     try {
 
-        const story = JSON.parse(
-            storyInput.value
-        );
+        const response =
+            await fetch(API_URL, {
 
-        const response = await fetch(API_URL, {
+                method: "POST",
 
-            method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
 
-            headers: {
-                "Content-Type": "application/json"
-            },
+                body: JSON.stringify({
 
-            body: JSON.stringify({
-                story: story
-            })
+                    project_id:
+                        "MIKO-0001",
 
-        });
+                    idea:
+                        idea,
+
+                    language:
+                        "id-ID",
+
+                    duration:
+                        45
+
+                })
+
+            });
+
 
         const data =
             await response.json();
+
 
         result.textContent =
             JSON.stringify(
@@ -277,6 +234,7 @@ button.addEventListener("click", async () => {
                 null,
                 2
             );
+
 
     } catch (error) {
 
@@ -287,8 +245,9 @@ button.addEventListener("click", async () => {
     } finally {
 
         button.disabled = false;
+
         button.textContent =
-            "🎬 Process Scenes";
+            "✨ Generate Story";
 
     }
 
@@ -297,4 +256,5 @@ button.addEventListener("click", async () => {
 </script>
 
 </body>
+
 </html>
