@@ -34,7 +34,7 @@ class HuggingFaceImageProvider(ImageProvider):
         self.provider = getattr(
             env,
             "HUGGINGFACE_IMAGE_PROVIDER",
-            "hf-inference"
+            "fal-ai"
         )
 
         self.base_url = "https://router.huggingface.co"
