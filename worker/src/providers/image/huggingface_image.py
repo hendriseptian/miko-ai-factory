@@ -28,7 +28,7 @@ class HuggingFaceImageProvider(ImageProvider):
         self.model = getattr(
             env,
             "HUGGINGFACE_IMAGE_MODEL",
-            "black-forest-labs/FLUX.1-schnell"
+            "fal-ai/flux/schnell"
         )
 
         self.provider = getattr(
