@@ -73,7 +73,9 @@ class Default(WorkerEntrypoint):
             "MIKO_STORY_RULES_V1.json"
         )
 
-        provider = GeminiProvider(self.env)
+        provider = GeminiProvider(
+            self.env
+        )
 
         engine = StoryEngine(
             provider=provider,
@@ -107,7 +109,12 @@ class Default(WorkerEntrypoint):
 
         return result
 
-        async def generate_image(self, data):
+    # ==========================================
+    # IMAGE ENGINE
+    # ==========================================
+
+    async def generate_image(self, data):
+
         project_id = data.get(
             "project_id",
             "MIKO-0001"
@@ -118,7 +125,9 @@ class Default(WorkerEntrypoint):
             "SCENE-01"
         )
 
-        prompt = data.get("prompt")
+        prompt = data.get(
+            "prompt"
+        )
 
         aspect_ratio = data.get(
             "aspect_ratio",
@@ -189,7 +198,7 @@ class Default(WorkerEntrypoint):
             return self.json_response({
                 "status": "ok",
                 "service": "miko-ai-factory",
-                "version": "0.2.0"
+                "version": "0.3.0"
             })
 
         # ======================================
@@ -204,7 +213,7 @@ class Default(WorkerEntrypoint):
 
                 "status": "foundation",
 
-                "version": "0.2.0",
+                "version": "0.3.0",
 
                 "endpoints": {
 
@@ -377,21 +386,28 @@ class Default(WorkerEntrypoint):
                 )
 
         # ======================================
-        # NOT FOUND
+        # IMAGE GENERATION
         # ======================================
 
-                if path == "/api/image/generate":
+        if path == "/api/image/generate":
+
             if method != "POST":
+
                 return self.json_response(
+
                     {
                         "success": False,
-                        "error": "method_not_allowed",
-                        "message": "Use POST."
+                        "error":
+                            "method_not_allowed",
+                        "message":
+                            "Use POST."
                     },
+
                     status=405
                 )
 
             try:
+
                 data = await request.json()
 
                 image = await self.generate_image(
@@ -399,29 +415,47 @@ class Default(WorkerEntrypoint):
                 )
 
                 return self.json_response({
+
                     "success": True,
+
                     "image": image
+
                 })
 
             except ValueError as error:
+
                 return self.json_response(
+
                     {
                         "success": False,
-                        "error": "validation_error",
-                        "message": str(error)
+                        "error":
+                            "validation_error",
+                        "message":
+                            str(error)
                     },
+
                     status=400
                 )
 
             except Exception as error:
+
                 return self.json_response(
+
                     {
                         "success": False,
-                        "error": "image_generation_failed",
-                        "message": str(error)
+                        "error":
+                            "image_generation_failed",
+                        "message":
+                            str(error)
                     },
+
                     status=500
                 )
+
+        # ======================================
+        # NOT FOUND
+        # ======================================
+
         return self.json_response(
 
             {
