@@ -16,10 +16,10 @@ class Default(WorkerEntrypoint):
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Max-Age": "86400",
+        "Access-Control-Max-Age": "86400"
     }
 
-    VERSION = "0.4.0"
+    VERSION = "0.5.0"
 
     def json_response(self, data, status=200):
         return Response.json(
@@ -108,6 +108,62 @@ class Default(WorkerEntrypoint):
             f"Unsupported image provider: {provider_name}"
         )
 
+    def get_character_reference_images(
+        self,
+        data,
+        use_character_reference=False
+    ):
+        """
+        Reference priority:
+
+        1. Explicit reference_images in the request.
+        2. MIKO_REFERENCE_IMAGE_URL runtime variable.
+
+        The runtime variable is intended for the canonical Miko
+        single-character reference image stored publicly, for example
+        in the GitHub repository.
+
+        This method never exposes the secret/token.
+        """
+
+        references = data.get(
+            "reference_images",
+            []
+        )
+
+        if references is None:
+            references = []
+
+        if not isinstance(references, list):
+            references = [references]
+
+        references = [
+            item for item in references
+            if item
+        ]
+
+        if references:
+            return references
+
+        if not use_character_reference:
+            return []
+
+        default_reference = getattr(
+            self.env,
+            "MIKO_REFERENCE_IMAGE_URL",
+            None
+        )
+
+        if default_reference:
+            return [default_reference]
+
+        raise ValueError(
+            "Miko character reference is enabled, "
+            "but MIKO_REFERENCE_IMAGE_URL is not configured. "
+            "Set the Worker runtime variable or provide "
+            "reference_images in the request."
+        )
+
     async def generate_image(self, data):
         project_id = data.get(
             "project_id",
@@ -126,20 +182,32 @@ class Default(WorkerEntrypoint):
             "9:16"
         )
 
-        reference_images = data.get(
-            "reference_images",
-            []
+        provider_name = data.get(
+            "provider",
+            "huggingface"
+        )
+
+        use_character_reference = (
+            data.get(
+                "use_character_reference",
+                False
+            )
+            is True
+        )
+
+        reference_images = (
+            self.get_character_reference_images(
+                data=data,
+                use_character_reference=(
+                    use_character_reference
+                )
+            )
         )
 
         if not prompt:
             raise ValueError(
                 "Field 'prompt' is required."
             )
-
-        provider_name = data.get(
-            "provider",
-            "huggingface"
-        )
 
         provider = self.get_image_provider(
             provider_name
@@ -151,7 +219,7 @@ class Default(WorkerEntrypoint):
             reference_images=reference_images
         )
 
-        return {
+        response = {
             "project_id": project_id,
             "scene_id": scene_id,
             "status": "IMAGE_GENERATED",
@@ -163,23 +231,32 @@ class Default(WorkerEntrypoint):
             "image_data": result["data"]
         }
 
+        if result.get("mode"):
+            response["mode"] = result["mode"]
+
+        if result.get("reference_count") is not None:
+            response["reference_count"] = (
+                result["reference_count"]
+            )
+
+        return response
+
     async def generate_scene_image(self, data):
         """
-        Generate one image directly from a processed Scene Engine scene.
+        Generate one scene image.
+
+        Character reference is ON by default for this endpoint.
+        This is intentional: Miko scenes need a canonical character
+        reference to maintain identity across generations.
 
         Input:
         {
           "story": { ... },
           "scene_id": "SCENE-01",
-          "provider": "huggingface"
+          "provider": "huggingface",
+          "use_character_reference": true,
+          "reference_images": []
         }
-
-        The endpoint processes the story through SceneEngine,
-        selects exactly one scene, and sends that scene's
-        image_prompt_v1 to the existing Image Engine.
-
-        Only one image is generated per request so the response
-        remains manageable and each scene can be QC'd independently.
         """
 
         story = data.get("story")
@@ -202,6 +279,12 @@ class Default(WorkerEntrypoint):
         aspect_ratio = data.get(
             "aspect_ratio",
             "9:16"
+        )
+
+        # Default ON for /api/image/scene.
+        use_character_reference = data.get(
+            "use_character_reference",
+            True
         )
 
         scene_data = await self.process_scenes(
@@ -242,18 +325,32 @@ class Default(WorkerEntrypoint):
                 "contain image_prompt_v1."
             )
 
+        request_references = data.get(
+            "reference_images",
+            []
+        )
+
+        if not request_references:
+            request_references = selected_scene.get(
+                "reference_assets",
+                []
+            )
+
         image_result = await self.generate_image({
             "project_id": scene_data.get(
                 "project_id",
-                story.get("project_id", "MIKO-0001")
+                story.get(
+                    "project_id",
+                    "MIKO-0001"
+                )
             ),
             "scene_id": requested_scene_id,
             "prompt": image_prompt,
             "aspect_ratio": aspect_ratio,
             "provider": provider_name,
-            "reference_images": selected_scene.get(
-                "reference_assets",
-                []
+            "reference_images": request_references,
+            "use_character_reference": (
+                use_character_reference
             )
         })
 
@@ -305,6 +402,15 @@ class Default(WorkerEntrypoint):
                     "scene": "POST /api/scene/process",
                     "image": "POST /api/image/generate",
                     "scene_image": "POST /api/image/scene"
+                },
+                "image_reference": {
+                    "enabled_by_default_for_scene_image": True,
+                    "reference_variable": (
+                        "MIKO_REFERENCE_IMAGE_URL"
+                    ),
+                    "reference_model": (
+                        "Qwen/Qwen-Image-Edit"
+                    )
                 }
             })
 
@@ -367,7 +473,6 @@ class Default(WorkerEntrypoint):
 
             try:
                 data = await request.json()
-
                 story = data.get("story")
 
                 if not story:
@@ -468,7 +573,6 @@ class Default(WorkerEntrypoint):
                     data
                 )
 
-                # The response intentionally contains one image only.
                 return self.json_response({
                     "success": True,
                     "project_id": result.get(
