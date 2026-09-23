@@ -9,15 +9,20 @@ from .base import ImageProvider
 
 class HuggingFaceImageProvider(ImageProvider):
     """
-    Hugging Face Inference Providers image provider.
+    Hugging Face Inference Providers image provider V4.
 
-    Design goals:
-    - No huggingface_hub dependency (Cloudflare Python Worker compatible).
-    - Uses the Hugging Face model ID as the source of truth.
-    - Resolves the current provider-specific model ID from the
-      Hugging Face Hub API instead of hard-coding it.
-    - Supports Fal AI through Hugging Face routing.
-    - Accepts both raw image responses and JSON image-URL responses.
+    Two modes are supported:
+
+    1. Text-to-image:
+       Uses the existing FLUX.1-schnell path.
+
+    2. Reference-image mode:
+       When reference_images are supplied, uses an image-to-image
+       model so a canonical Miko reference can guide character identity.
+
+    Cloudflare Python Worker compatible:
+    - No huggingface_hub dependency.
+    - Uses workers.fetch directly.
     """
 
     name = "huggingface"
@@ -27,6 +32,10 @@ class HuggingFaceImageProvider(ImageProvider):
 
     DEFAULT_MODEL = "black-forest-labs/FLUX.1-schnell"
     DEFAULT_PROVIDER = "fal-ai"
+
+    # Hugging Face currently documents Qwen Image Edit through
+    # Inference Providers/Fal for image-to-image use.
+    DEFAULT_REFERENCE_MODEL = "Qwen/Qwen-Image-Edit"
 
     def __init__(self, env):
         self.env = env
@@ -49,6 +58,12 @@ class HuggingFaceImageProvider(ImageProvider):
             self.DEFAULT_PROVIDER,
         )
 
+        self.reference_model = getattr(
+            env,
+            "HUGGINGFACE_REFERENCE_MODEL",
+            self.DEFAULT_REFERENCE_MODEL,
+        )
+
     def _get_image_size(self, aspect_ratio):
         if aspect_ratio == "16:9":
             return 1344, 768
@@ -56,20 +71,11 @@ class HuggingFaceImageProvider(ImageProvider):
         if aspect_ratio == "1:1":
             return 1024, 1024
 
-        # Default for Miko Shorts: vertical 9:16.
         return 768, 1344
 
-    async def _resolve_provider_mapping(self):
-        """
-        Ask Hugging Face which provider-specific model ID is currently
-        active for the selected model/provider.
-
-        This avoids assuming that a provider model ID will remain
-        permanently identical to today's value.
-        """
-
+    async def _resolve_provider_mapping(self, model):
         encoded_model = quote(
-            self.model,
+            model,
             safe="/",
         )
 
@@ -122,7 +128,7 @@ class HuggingFaceImageProvider(ImageProvider):
 
             raise RuntimeError(
                 f"Provider '{self.provider}' is not available "
-                f"for model '{self.model}'. "
+                f"for model '{model}'. "
                 f"Available providers: {available or 'none'}"
             )
 
@@ -131,7 +137,7 @@ class HuggingFaceImageProvider(ImageProvider):
         if status and status != "live":
             raise RuntimeError(
                 f"Provider '{self.provider}' for model "
-                f"'{self.model}' is not live "
+                f"'{model}' is not live "
                 f"(status: {status})."
             )
 
@@ -145,24 +151,12 @@ class HuggingFaceImageProvider(ImageProvider):
 
         return str(provider_model)
 
-    def _build_payload(
+    def _build_text_payload(
         self,
         prompt,
         width,
         height,
     ):
-        """
-        Build the request body expected by the selected provider.
-
-        Fal AI uses:
-            prompt
-            image_size
-
-        The HF native provider uses the generic:
-            inputs
-            parameters
-        """
-
         if self.provider == "fal-ai":
             return {
                 "prompt": str(prompt),
@@ -182,19 +176,182 @@ class HuggingFaceImageProvider(ImageProvider):
             },
         }
 
+    async def _to_data_url(self, reference):
+        """
+        Convert a reference item into a data:image/*;base64,... URL.
+
+        Accepted forms:
+        - https://... image URL
+        - data:image/...;base64,...
+        - raw base64 string
+        - {"url": "..."}
+        - {"data": "...", "mime_type": "image/png"}
+        """
+
+        if isinstance(reference, dict):
+            if reference.get("url"):
+                reference = reference["url"]
+            elif reference.get("data"):
+                mime_type = (
+                    reference.get("mime_type")
+                    or "image/png"
+                )
+                data = str(reference["data"])
+
+                if data.startswith("data:"):
+                    return data
+
+                return (
+                    f"data:{mime_type};base64,"
+                    f"{data}"
+                )
+
+        if not isinstance(reference, str):
+            raise ValueError(
+                "Reference image must be a URL, data URL, "
+                "base64 string, or object containing url/data."
+            )
+
+        value = reference.strip()
+
+        if not value:
+            raise ValueError(
+                "Reference image cannot be empty."
+            )
+
+        if value.startswith("data:image/"):
+            return value
+
+        if value.startswith("http://") or value.startswith(
+            "https://"
+        ):
+            response = await fetch(
+                value,
+                method="GET",
+                headers={
+                    "Accept": "image/*",
+                },
+            )
+
+            if not response.ok:
+                error_text = await response.text()
+
+                raise RuntimeError(
+                    "Failed to download reference image "
+                    f"{response.status}: {error_text}"
+                )
+
+            image_bytes = await self._read_response_bytes(
+                response
+            )
+
+            if not image_bytes:
+                raise RuntimeError(
+                    "Reference image is empty."
+                )
+
+            mime_type = (
+                response.headers.get(
+                    "content-type"
+                )
+                or "image/png"
+            )
+
+            mime_type = mime_type.split(
+                ";",
+                1,
+            )[0].strip()
+
+            return (
+                f"data:{mime_type};base64,"
+                f"{base64.b64encode(image_bytes).decode('ascii')}"
+            )
+
+        # Raw base64.
+        return (
+            "data:image/png;base64,"
+            + value
+        )
+
+    async def _prepare_reference_images(
+        self,
+        reference_images,
+    ):
+        if reference_images is None:
+            return []
+
+        if not isinstance(reference_images, list):
+            reference_images = [reference_images]
+
+        prepared = []
+
+        for reference in reference_images:
+            if reference is None:
+                continue
+
+            prepared.append(
+                await self._to_data_url(reference)
+            )
+
+        return prepared
+
+    def _build_reference_payload(
+        self,
+        prompt,
+        reference_images,
+        width,
+        height,
+    ):
+        """
+        Qwen Image Edit (Fal) uses image_url (singular) for its
+        current endpoint. We intentionally use one canonical Miko
+        reference image for identity preservation.
+
+        The endpoint accepts a public URL or a Base64 data URI.
+        """
+
+        if self.provider == "fal-ai":
+            first_image = reference_images[0]
+
+            return {
+                "image_url": first_image,
+                "prompt": str(prompt),
+                "image_size": {
+                    "width": width,
+                    "height": height,
+                },
+                "num_inference_steps": 30,
+                "guidance_scale": 4.0,
+                "num_images": 1,
+                "enable_safety_checker": True,
+                "output_format": "png",
+                "negative_prompt": (
+                    "human person, child, human face, "
+                    "different animal, different character, "
+                    "character redesign, duplicate character, "
+                    "extra limbs, distorted anatomy, text, logo, watermark"
+                ),
+            }
+
+        # Generic fallback. The HF task specification accepts the
+        # input image as base64 and prompt/parameters.
+        first_image = reference_images[0]
+
+        return {
+            "inputs": first_image,
+            "parameters": {
+                "prompt": str(prompt),
+                "num_inference_steps": 30,
+            },
+        }
+
     async def _read_response_bytes(self, response):
-        """
-        Read a Cloudflare Fetch Response body in Python Workers.
-
-        The workers-py Response exposes the Fetch body as a JavaScript
-        ReadableStream. Each chunk is a Uint8Array and Pyodide exposes
-        to_bytes() for converting it to Python bytes.
-        """
-
         body = response.body
 
         if body is None:
-            raise RuntimeError("Response body is empty.")
+            raise RuntimeError(
+                "Response body is empty."
+            )
 
         reader = body.getReader()
         chunks = []
@@ -209,7 +366,9 @@ class HuggingFaceImageProvider(ImageProvider):
                 value = result.value
 
                 if value is not None:
-                    chunks.append(value.to_bytes())
+                    chunks.append(
+                        value.to_bytes()
+                    )
         finally:
             try:
                 reader.releaseLock()
@@ -217,7 +376,9 @@ class HuggingFaceImageProvider(ImageProvider):
                 pass
 
         if not chunks:
-            raise RuntimeError("Response body is empty.")
+            raise RuntimeError(
+                "Response body is empty."
+            )
 
         return b"".join(chunks)
 
@@ -238,7 +399,9 @@ class HuggingFaceImageProvider(ImageProvider):
                 f"{image_response.status}: {error_text}"
             )
 
-        image_buffer = await self._read_response_bytes(image_response)
+        image_buffer = await self._read_response_bytes(
+            image_response
+        )
 
         if not image_buffer:
             raise RuntimeError(
@@ -246,7 +409,9 @@ class HuggingFaceImageProvider(ImageProvider):
             )
 
         mime_type = (
-            image_response.headers.get("content-type")
+            image_response.headers.get(
+                "content-type"
+            )
             or "image/png"
         )
 
@@ -255,29 +420,25 @@ class HuggingFaceImageProvider(ImageProvider):
             1,
         )[0].strip()
 
-        image_data = base64.b64encode(
-            bytes(image_buffer)
-        ).decode("ascii")
+        return (
+            base64.b64encode(
+                image_buffer
+            ).decode("ascii"),
+            mime_type,
+        )
 
-        return image_data, mime_type
-
-    async def _parse_response(
-        self,
-        response,
-    ):
-        """
-        Handle both response styles:
-        1. Raw image bytes.
-        2. JSON containing an image URL, as used by Fal.
-        """
-
+    async def _parse_response(self, response):
         content_type = (
-            response.headers.get("content-type")
+            response.headers.get(
+                "content-type"
+            )
             or ""
         ).lower()
 
         if content_type.startswith("image/"):
-            image_buffer = await self._read_response_bytes(response)
+            image_buffer = await self._read_response_bytes(
+                response
+            )
 
             if not image_buffer:
                 raise RuntimeError(
@@ -289,11 +450,12 @@ class HuggingFaceImageProvider(ImageProvider):
                 1,
             )[0].strip()
 
-            image_data = base64.b64encode(
-                bytes(image_buffer)
-            ).decode("ascii")
-
-            return image_data, mime_type
+            return (
+                base64.b64encode(
+                    image_buffer
+                ).decode("ascii"),
+                mime_type,
+            )
 
         try:
             result = await response.json()
@@ -324,7 +486,6 @@ class HuggingFaceImageProvider(ImageProvider):
                         image_url
                     )
 
-        # Some provider responses may return a single image URL.
         image_url = result.get("image_url")
 
         if image_url:
@@ -332,49 +493,52 @@ class HuggingFaceImageProvider(ImageProvider):
                 image_url
             )
 
-        # Preserve the actual provider response for debugging.
+        # Some APIs may return a data URL directly.
+        output = result.get("image")
+
+        if isinstance(output, str) and output.startswith(
+            "data:image/"
+        ):
+            header, encoded = output.split(
+                ",",
+                1,
+            )
+
+            mime_type = (
+                header.split(";", 1)[0]
+                .replace("data:", "")
+            )
+
+            return encoded, mime_type
+
         raise RuntimeError(
             "Hugging Face provider returned JSON but "
             "no generated image was found. "
             f"Response: {json.dumps(result, ensure_ascii=False)}"
         )
 
-    async def generate(
+    async def _generate_text_to_image(
         self,
         prompt,
-        aspect_ratio="9:16",
-        reference_images=None,
+        aspect_ratio,
     ):
-        if not self.api_key:
-            raise RuntimeError(
-                "HUGGINGFACE_API_KEY is not configured."
-            )
-
-        if not prompt or not str(prompt).strip():
-            raise ValueError(
-                "Image prompt is required."
-            )
-
         width, height = self._get_image_size(
             aspect_ratio
         )
 
         provider_model = (
-            await self._resolve_provider_mapping()
+            await self._resolve_provider_mapping(
+                self.model
+            )
         )
 
-        # Hugging Face routes provider calls using:
-        # /{provider}/{provider-specific-model-id}
-        #
-        # The provider-specific model ID is resolved dynamically
-        # from the Hub API above.
         url = (
             f"{self.HF_ROUTER_BASE_URL}/"
             f"{self.provider}/"
             f"{provider_model}"
         )
 
-        payload = self._build_payload(
+        payload = self._build_text_payload(
             prompt=prompt,
             width=width,
             height=height,
@@ -411,6 +575,7 @@ class HuggingFaceImageProvider(ImageProvider):
         return {
             "provider": self.name,
             "provider_backend": self.provider,
+            "mode": "text-to-image",
             "model": self.model,
             "provider_model": provider_model,
             "mime_type": mime_type,
@@ -418,3 +583,117 @@ class HuggingFaceImageProvider(ImageProvider):
             "image_size": f"{width}x{height}",
             "data": image_data,
         }
+
+    async def _generate_with_reference(
+        self,
+        prompt,
+        aspect_ratio,
+        reference_images,
+    ):
+        prepared_references = (
+            await self._prepare_reference_images(
+                reference_images
+            )
+        )
+
+        if not prepared_references:
+            raise ValueError(
+                "Reference image mode was requested, "
+                "but no usable reference image was supplied."
+            )
+
+        provider_model = (
+            await self._resolve_provider_mapping(
+                self.reference_model
+            )
+        )
+
+        url = (
+            f"{self.HF_ROUTER_BASE_URL}/"
+            f"{self.provider}/"
+            f"{provider_model}"
+        )
+
+        width, height = self._get_image_size(
+            aspect_ratio
+        )
+
+        payload = self._build_reference_payload(
+            prompt=prompt,
+            reference_images=prepared_references,
+            width=width,
+            height=height,
+        )
+
+        response = await fetch(
+            url,
+            method="POST",
+            headers={
+                "Authorization": (
+                    f"Bearer {self.api_key}"
+                ),
+                "Content-Type": "application/json",
+                "Accept": "image/*, application/json",
+            },
+            body=json.dumps(
+                payload,
+                ensure_ascii=False,
+            ),
+        )
+
+        if not response.ok:
+            error_text = await response.text()
+
+            raise RuntimeError(
+                "Hugging Face Reference Image API error "
+                f"{response.status}: {error_text}"
+            )
+
+        image_data, mime_type = (
+            await self._parse_response(response)
+        )
+
+        width, height = self._get_image_size(
+            aspect_ratio
+        )
+
+        return {
+            "provider": self.name,
+            "provider_backend": self.provider,
+            "mode": "reference-image",
+            "model": self.reference_model,
+            "provider_model": provider_model,
+            "mime_type": mime_type,
+            "aspect_ratio": aspect_ratio,
+            "image_size": f"{width}x{height}",
+            "reference_count": len(prepared_references),
+            "data": image_data,
+        }
+
+    async def generate(
+        self,
+        prompt,
+        aspect_ratio="9:16",
+        reference_images=None,
+    ):
+        if not self.api_key:
+            raise RuntimeError(
+                "HUGGINGFACE_API_KEY is not configured."
+            )
+
+        if not prompt or not str(prompt).strip():
+            raise ValueError(
+                "Image prompt is required."
+            )
+
+        if reference_images:
+            return await self._generate_with_reference(
+                prompt=prompt,
+                aspect_ratio=aspect_ratio,
+                reference_images=reference_images,
+            )
+
+        return await self._generate_text_to_image(
+            prompt=prompt,
+            aspect_ratio=aspect_ratio,
+        )
