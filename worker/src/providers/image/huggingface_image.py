@@ -199,7 +199,7 @@ class HuggingFaceImageProvider(ImageProvider):
                 f"{image_response.status}: {error_text}"
             )
 
-        image_buffer = await image_response.array_buffer()
+        image_buffer = await image_response.arrayBuffer()
 
         if not image_buffer:
             raise RuntimeError(
@@ -238,7 +238,7 @@ class HuggingFaceImageProvider(ImageProvider):
         ).lower()
 
         if content_type.startswith("image/"):
-            image_buffer = await response.array_buffer()
+            image_buffer = await response.arrayBuffer()
 
             if not image_buffer:
                 raise RuntimeError(
