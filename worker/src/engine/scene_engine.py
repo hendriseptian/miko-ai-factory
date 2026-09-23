@@ -3,56 +3,38 @@ import copy
 
 class SceneEngine:
     """
-    Miko Scene Engine V1.1
+    Miko Scene Engine V1.2
 
-    Focus:
-    - Preserve story fidelity from Story Engine V1.1.
-    - Convert each scene into production-ready image/video prompts.
-    - Make the main story object clearly visible.
-    - Prefer story shots over character portraits.
-    - Keep image and video responsibilities separate.
+    Converts Story Engine scenes into production-ready image/video prompts.
+    Keeps the existing constructor and process() interface compatible with
+    the Miko AI Factory V0.4.x main.py.
     """
 
-    VERSION = "1.1"
+    VERSION = "1.2"
 
     MIKO_CHARACTER_LOCK = """
-Miko is a young male orange-and-white kitten,
-visual age approximately 4-6 years old,
-with large expressive dark brown eyes,
-a pink nose,
-a round relatively large head,
-a small rounded body,
-short legs,
-and soft orange-and-white fur.
-
-Miko wears a bright blue hoodie with white drawstrings
-and a paw-shaped pendant.
-
-Miko does not wear shoes.
-
-Miko has a cheerful, curious, kind, playful,
-friendly, brave, slightly clumsy,
-and helpful personality.
-
-Keep Miko's appearance identical across all scenes.
-Do not redesign, recolor, age, or replace Miko.
+Miko is a young male orange-and-white kitten, visual age 4-6 years old.
+He has large expressive dark brown eyes, a pink nose, a round relatively
+large head, a small rounded body, short legs, and soft orange-and-white fur.
+He wears a bright blue hoodie with white drawstrings and a paw-shaped pendant.
+He does not wear shoes.
+Keep Miko's appearance consistent across all scenes.
+Do not redesign, recolor, age, replace, or duplicate Miko.
 """
 
     VISUAL_STYLE_LOCK = """
 Polished stylized 3D children's animation.
+Colorful, warm, cheerful, safe, playful.
+Soft rounded shapes, expressive character design,
+soft cinematic lighting, clean readable composition.
+Child-friendly environment.
+Vertical 9:16 composition.
+"""
 
-Colorful, warm, cheerful, safe, playful,
-soft rounded shapes, expressive character design,
-soft cinematic lighting, clean composition,
-high visual clarity, child-friendly environment.
-
-Target audience: children aged 3-8.
-
-Vertical composition, 9:16 aspect ratio.
-
-Avoid realistic human appearance.
-Avoid horror, darkness, violence, disturbing imagery,
-adult themes, weapons, or dangerous behavior.
+    SAFETY_LOCK = """
+No text, subtitles, logos, watermark, UI, horror, violence,
+weapons, adult themes, disturbing imagery, dangerous behavior,
+extra limbs, duplicated characters, or distorted anatomy.
 """
 
     def __init__(self, story):
@@ -66,11 +48,10 @@ adult themes, weapons, or dangerous behavior.
     def build_visual_style_lock(self):
         return self.VISUAL_STYLE_LOCK.strip()
 
+    def build_safety_lock(self):
+        return self.SAFETY_LOCK.strip()
+
     def get_main_object(self, scene):
-        """
-        Prefer the scene-level main_object introduced by
-        Story Engine V1.1. Fall back to the story-level object.
-        """
         scene_object = scene.get("main_object")
         if isinstance(scene_object, str) and scene_object.strip():
             return scene_object.strip()
@@ -81,108 +62,148 @@ adult themes, weapons, or dangerous behavior.
 
         return ""
 
+    def get_main_event(self, scene):
+        scene_event = scene.get("main_event")
+        if isinstance(scene_event, str) and scene_event.strip():
+            return scene_event.strip()
+
+        story_event = self.story.get("main_event")
+        if isinstance(story_event, str) and story_event.strip():
+            return story_event.strip()
+
+        return ""
+
+    def get_characters(self, scene):
+        characters = scene.get("characters", [])
+        if not isinstance(characters, list):
+            return []
+
+        return [
+            str(item).strip()
+            for item in characters
+            if str(item).strip()
+        ]
+
+    def build_scene_composition(self, scene):
+        main_object = self.get_main_object(scene)
+        action = str(scene.get("action", "")).strip()
+
+        if main_object:
+            object_instruction = f"""
+MAIN STORY OBJECT:
+{main_object}
+
+The main story object is a required visual element.
+Make it clearly visible and recognizable.
+It must be large enough to identify easily.
+Do not hide, crop, obscure, replace, or minimize it
+into an insignificant background detail.
+Show Miko and the main story object together
+in the same readable frame.
+"""
+        else:
+            object_instruction = """
+There is no explicit main story object.
+Do not invent a new major story object.
+Focus on the exact scene action.
+"""
+
+        return f"""
+SHOT TYPE:
+Story-focused medium-wide production shot, not a portrait.
+
+CAMERA:
+Use a camera distance wide enough to show Miko's body,
+the actual environment, and the main story object.
+
+COMPOSITION:
+Miko and the main story object must both be readable
+in the same frame and visibly related to the action.
+Keep enough space around them to understand the scene.
+Do not fill the frame with Miko's face.
+Do not use an extreme close-up.
+Do not crop the main story object.
+
+ENVIRONMENT:
+Show enough of the stated location to make the location
+immediately understandable.
+
+ACTION MOMENT:
+Show ONE clear visual moment from this action:
+{action}
+
+{object_instruction}
+""".strip()
+
     def build_image_prompt(self, scene):
         location = str(scene.get("location", "")).strip()
         action = str(scene.get("action", "")).strip()
-        characters = ", ".join(
-            str(item).strip()
-            for item in scene.get("characters", [])
-            if str(item).strip()
-        )
+        characters = ", ".join(self.get_characters(scene))
         main_object = self.get_main_object(scene)
+        main_event = self.get_main_event(scene)
 
-        prompt = f"""
-CHARACTER LOCK:
-{self.build_character_lock()}
+        source_image_prompt = str(
+            scene.get("image_prompt", "")
+        ).strip()
 
-VISUAL STYLE:
-{self.build_visual_style_lock()}
+        sections = [
+            "VERTICAL STORY FRAME — 9:16.",
+            "",
+            "STORY CONTEXT:",
+            f"Main event: {main_event or 'Follow the exact scene action.'}",
+            f"Main story object: {main_object or 'None specified.'}",
+            "",
+            "SCENE:",
+            f"Location: {location or 'Use the scene location.'}",
+            f"Characters: {characters or 'Miko'}",
+            f"Action: {action or 'Show the exact scene action.'}",
+            "",
+            self.build_scene_composition(scene),
+            "",
+            "MIKO CHARACTER:",
+            self.build_character_lock(),
+            "",
+            "VISUAL STYLE:",
+            self.build_visual_style_lock(),
+            "",
+            "STORY FIDELITY:",
+            """
+This must look like a scene from a children's animated story,
+not a character showcase.
 
-STORY OBJECT PRIORITY:
-Main story object:
-{main_object}
+The image must communicate the story event visually.
+Miko must be visibly performing or reacting to the exact
+scene action.
 
-The main story object is essential to this scene.
+If a main story object exists, it must be clearly visible
+in the same frame as Miko.
 
-Make the main story object clearly visible,
-recognizable, and visually relevant.
+Do not replace the main story object with another object.
+Do not remove the main story object.
+Do not turn the scene into a generic standing, walking,
+smiling, or character showcase image.
 
-Do not hide, crop, obscure, or replace the main story object.
+Use one clear visual moment.
+Do not depict multiple sequential actions in one frame.
+""".strip(),
+            "",
+            "SAFETY / NEGATIVE CONSTRAINTS:",
+            self.build_safety_lock(),
+        ]
 
-The main story object must not become a vague background detail.
+        if source_image_prompt:
+            sections.extend([
+                "",
+                "SOURCE STORY DESCRIPTION:",
+                """
+Use this only as additional narrative context.
+The SCENE, ACTION, MAIN STORY OBJECT, and COMPOSITION
+rules above have priority.
+""".strip(),
+                source_image_prompt,
+            ])
 
-SCENE:
-Location: {location}
-Characters: {characters}
-Action: {action}
-
-SHOT TYPE:
-Create a story-focused production shot,
-not a character portrait.
-
-Prefer a medium-wide or wide composition when needed
-to show Miko together with the main story object.
-
-Miko should not fill the entire frame.
-
-Show enough of the environment to clearly establish
-the story location.
-
-If the main story object is small, place it in the
-foreground or middle ground so it remains clearly visible.
-
-Miko should visually interact with, notice, look toward,
-approach, or act toward the main story object according
-to the exact scene action.
-
-COMPOSITION:
-Use clear foreground, middle ground, and background.
-
-Place Miko and the main story object in the same
-readable composition whenever the story action allows it.
-
-The camera should prioritize the relationship between
-Miko and the main story object.
-
-Do not use an extreme close-up of Miko's face unless
-the scene explicitly requires a facial reaction.
-
-Do not create a character reference sheet,
-character turnaround, fashion portrait, or isolated
-character portrait.
-
-IMAGE REQUIREMENTS:
-Create one clear vertical 9:16 production frame.
-
-Show one specific visual moment from the scene.
-
-The image must visually communicate:
-1. where the scene happens,
-2. what Miko is doing,
-3. what the main story object is,
-4. how Miko relates to the main story object.
-
-Keep Miko's character identity consistent with the
-Character Lock above.
-
-Keep the main story object consistent with the
-Story Object Priority above.
-
-Do not introduce unnecessary characters,
-objects, locations, or visual events.
-
-Do not redesign Miko.
-
-Do not add text, subtitles, logos, watermark,
-or UI elements.
-
-The image should be suitable as the starting frame
-for image-to-video generation.
-
-Do not add a new story event that is not present
-in the scene action.
-"""
-        return self.clean_prompt(prompt)
+        return self.clean_prompt("\n".join(sections))
 
     def build_video_prompt(self, scene):
         action = str(scene.get("action", "")).strip()
@@ -190,66 +211,69 @@ in the scene action.
         main_object = self.get_main_object(scene)
 
         prompt = f"""
+VERTICAL VIDEO SCENE — 9:16.
+
 CHARACTER CONSISTENCY:
-Keep Miko exactly consistent with the established
-Miko Character Lock.
+{self.build_character_lock()}
 
 MAIN STORY OBJECT:
-{main_object}
+{main_object or "No explicit main story object."}
 
 SCENE ACTION:
-{action}
+{action or "Follow the source scene exactly."}
 
-CAMERA / MOVEMENT:
-{video_prompt}
+SOURCE CAMERA / MOVEMENT:
+{video_prompt or "Use subtle natural movement and gentle camera motion."}
 
-VIDEO REQUIREMENTS:
-Create subtle, natural animation suitable for
-a children's 3D animated short.
+VIDEO DIRECTION:
+Animate the exact action from the source scene.
+Preserve the source image composition.
 
-Preserve the composition and character identity
-from the source image.
+Keep Miko and the main story object clearly visible
+when both are present in the source image.
 
-Keep the main story object clearly visible
-during the important part of the action.
-
-Animate the exact scene action rather than inventing
-a different story event.
-
-Use gentle character movement and simple camera motion.
-
+Do not invent a new story event.
+Do not replace or remove the main story object.
 Do not redesign Miko.
+Do not change Miko's clothing, fur, face,
+body proportions, or pendant.
 
-Do not change clothing, fur color, face,
-body proportions, or accessories.
-
-Do not replace, remove, or transform the main story object.
-
-Do not introduce new characters or locations.
-
-Avoid sudden camera movements, distortion,
-extra limbs, duplicated objects, flickering,
+Use gentle children's animation movement.
+Avoid sudden camera movements, flickering,
+object duplication, extra limbs, facial distortion,
 or unnatural deformation.
 
-Maintain a clean vertical 9:16 composition.
+Maintain vertical 9:16 composition.
+
+{self.build_safety_lock()}
 """
         return self.clean_prompt(prompt)
 
     def clean_prompt(self, prompt):
-        lines = [
-            line.strip()
-            for line in prompt.strip().splitlines()
-            if line.strip()
-        ]
-        return "\n".join(lines)
+        lines = [line.rstrip() for line in prompt.strip().splitlines()]
+        cleaned = []
+        previous_blank = False
+
+        for line in lines:
+            stripped = line.strip()
+
+            if not stripped:
+                if not previous_blank:
+                    cleaned.append("")
+                previous_blank = True
+                continue
+
+            cleaned.append(stripped)
+            previous_blank = False
+
+        return "\n".join(cleaned).strip()
 
     def process_scene(self, scene):
         processed = copy.deepcopy(scene)
 
-        main_object = self.get_main_object(scene)
-
         processed["scene_engine_version"] = self.VERSION
-        processed["main_object"] = main_object
+        processed["main_event"] = self.get_main_event(scene)
+        processed["main_object"] = self.get_main_object(scene)
 
         processed["character_lock"] = self.build_character_lock()
         processed["visual_style"] = self.build_visual_style_lock()
@@ -277,9 +301,7 @@ Maintain a clean vertical 9:16 composition.
         scenes = self.story.get("scenes", [])
 
         if not isinstance(scenes, list):
-            raise ValueError(
-                "Story field 'scenes' must be an array."
-            )
+            raise ValueError("Story field 'scenes' must be an array.")
 
         processed_scenes = []
 
@@ -289,11 +311,9 @@ Maintain a clean vertical 9:16 composition.
                     f"Scene at index {index} is invalid."
                 )
 
-            processed_scenes.append(
-                self.process_scene(scene)
-            )
+            processed_scenes.append(self.process_scene(scene))
 
-        result = {
+        return {
             "project_id": self.story.get("project_id"),
             "title": self.story.get("title"),
             "language": self.story.get("language"),
@@ -305,7 +325,5 @@ Maintain a clean vertical 9:16 composition.
             "status": "SCENE_READY",
             "character_lock": self.build_character_lock(),
             "visual_style": self.build_visual_style_lock(),
-            "scenes": processed_scenes
+            "scenes": processed_scenes,
         }
-
-        return result
