@@ -6,6 +6,7 @@ from workers import WorkerEntrypoint, Response
 from engine.story_engine import StoryEngine
 from engine.scene_engine import SceneEngine
 from providers.gemini import GeminiProvider
+from providers.image.gemini_image import GeminiImageProvider
 
 
 class Default(WorkerEntrypoint):
@@ -106,6 +107,56 @@ class Default(WorkerEntrypoint):
 
         return result
 
+        async def generate_image(self, data):
+        project_id = data.get(
+            "project_id",
+            "MIKO-0001"
+        )
+
+        scene_id = data.get(
+            "scene_id",
+            "SCENE-01"
+        )
+
+        prompt = data.get("prompt")
+
+        aspect_ratio = data.get(
+            "aspect_ratio",
+            "9:16"
+        )
+
+        reference_images = data.get(
+            "reference_images",
+            []
+        )
+
+        if not prompt:
+            raise ValueError(
+                "Field 'prompt' is required."
+            )
+
+        provider = GeminiImageProvider(
+            self.env
+        )
+
+        result = await provider.generate(
+            prompt=prompt,
+            aspect_ratio=aspect_ratio,
+            reference_images=reference_images
+        )
+
+        return {
+            "project_id": project_id,
+            "scene_id": scene_id,
+            "status": "IMAGE_GENERATED",
+            "provider": result["provider"],
+            "model": result["model"],
+            "mime_type": result["mime_type"],
+            "aspect_ratio": result["aspect_ratio"],
+            "image_size": result["image_size"],
+            "image_data": result["data"]
+        }
+
     # ==========================================
     # HTTP
     # ==========================================
@@ -164,7 +215,10 @@ class Default(WorkerEntrypoint):
                         "POST /api/story/generate",
 
                     "scene":
-                        "POST /api/scene/process"
+                        "POST /api/scene/process",
+
+                    "image":
+                        "POST /api/image/generate"
 
                 }
 
@@ -326,6 +380,48 @@ class Default(WorkerEntrypoint):
         # NOT FOUND
         # ======================================
 
+                if path == "/api/image/generate":
+            if method != "POST":
+                return self.json_response(
+                    {
+                        "success": False,
+                        "error": "method_not_allowed",
+                        "message": "Use POST."
+                    },
+                    status=405
+                )
+
+            try:
+                data = await request.json()
+
+                image = await self.generate_image(
+                    data
+                )
+
+                return self.json_response({
+                    "success": True,
+                    "image": image
+                })
+
+            except ValueError as error:
+                return self.json_response(
+                    {
+                        "success": False,
+                        "error": "validation_error",
+                        "message": str(error)
+                    },
+                    status=400
+                )
+
+            except Exception as error:
+                return self.json_response(
+                    {
+                        "success": False,
+                        "error": "image_generation_failed",
+                        "message": str(error)
+                    },
+                    status=500
+                )
         return self.json_response(
 
             {
