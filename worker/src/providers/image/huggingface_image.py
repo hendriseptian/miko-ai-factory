@@ -8,10 +8,8 @@ from .base import ImageProvider
 
 class HuggingFaceImageProvider(ImageProvider):
     """
-    Hugging Face Inference Provider
-    for Miko image generation.
-
-    Uses direct HTTP fetch to Hugging Face Router.
+    Hugging Face Inference Providers
+    image generation provider for Miko AI Factory.
     """
 
     name = "huggingface"
@@ -25,19 +23,24 @@ class HuggingFaceImageProvider(ImageProvider):
             None
         )
 
+        # IMPORTANT:
+        # Keep the Hugging Face model ID.
         self.model = getattr(
             env,
             "HUGGINGFACE_IMAGE_MODEL",
-            "fal-ai/flux/schnell"
+            "black-forest-labs/FLUX.1-schnell"
         )
 
+        # Hugging Face provider identifier.
         self.provider = getattr(
             env,
             "HUGGINGFACE_IMAGE_PROVIDER",
             "fal-ai"
         )
 
-        self.base_url = "https://router.huggingface.co"
+        self.base_url = (
+            "https://router.huggingface.co"
+        )
 
     async def generate(
         self,
@@ -71,13 +74,19 @@ class HuggingFaceImageProvider(ImageProvider):
             height = 1024
 
         # ---------------------------------
-        # HUGGING FACE ROUTER
+        # HUGGING FACE PROVIDER ROUTER
         # ---------------------------------
-
+        #
+        # IMPORTANT:
+        # The model ID is the Hugging Face
+        # model ID, not the Fal model ID.
+        #
+        # Provider-specific routing is handled
+        # by the Hugging Face router.
+        #
         url = (
             f"{self.base_url}"
-            f"/{self.provider}"
-            f"/models/"
+            f"/fal-ai/"
             f"{self.model}"
         )
 
@@ -120,10 +129,12 @@ class HuggingFaceImageProvider(ImageProvider):
             )
 
         # ---------------------------------
-        # IMAGE DATA
+        # IMAGE RESPONSE
         # ---------------------------------
 
-        image_buffer = await response.array_buffer()
+        image_buffer = (
+            await response.array_buffer()
+        )
 
         if not image_buffer:
             raise RuntimeError(
@@ -135,7 +146,9 @@ class HuggingFaceImageProvider(ImageProvider):
         ).decode("ascii")
 
         mime_type = (
-            response.headers.get("content-type")
+            response.headers.get(
+                "content-type"
+            )
             or "image/png"
         )
 
