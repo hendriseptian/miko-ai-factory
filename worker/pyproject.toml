@@ -4,9 +4,7 @@ version = "0.3.0"
 description = "Cloudflare Python Worker orchestrator for Miko AI Video Factory"
 requires-python = ">=3.13"
 
-dependencies = [
-    "huggingface_hub"
-]
+dependencies = []
 
 [dependency-groups]
 dev = [
