@@ -94,7 +94,7 @@ class GeminiImageProvider(ImageProvider):
             "input": inputs,
             "response_format": {
                 "type": "image",
-                "mime_type": "image/png",
+                "mime_type": "image/jpeg",
                 "aspect_ratio": aspect_ratio,
                 "image_size": "1K"
             }
@@ -123,7 +123,7 @@ class GeminiImageProvider(ImageProvider):
 
         # Find generated image
         image_data = None
-        mime_type = "image/png"
+        mime_type = "image/jpeg"
 
         # Convenience property
         output_image = data.get(
