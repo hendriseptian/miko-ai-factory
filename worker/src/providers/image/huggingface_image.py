@@ -1,4 +1,5 @@
 import base64
+import json
 
 from workers import fetch
 
@@ -7,10 +8,10 @@ from .base import ImageProvider
 
 class HuggingFaceImageProvider(ImageProvider):
     """
-    Hugging Face Image Generation Provider.
+    Hugging Face Inference Provider
+    for Miko image generation.
 
-    Uses Hugging Face Inference Providers
-    with FLUX.1-schnell.
+    Uses automatic provider routing.
     """
 
     name = "huggingface"
@@ -53,9 +54,9 @@ class HuggingFaceImageProvider(ImageProvider):
                 "Image prompt is required."
             )
 
-        # ------------------------------------------
-        # Aspect ratio
-        # ------------------------------------------
+        # ==========================================
+        # ASPECT RATIO
+        # ==========================================
 
         width = 768
         height = 1344
@@ -70,32 +71,51 @@ class HuggingFaceImageProvider(ImageProvider):
             width = 1024
             height = 1024
 
-        # ------------------------------------------
-        # Hugging Face endpoint
-        # ------------------------------------------
+        # ==========================================
+        # IMAGE PROMPT
+        # ==========================================
+
+        final_prompt = prompt
+
+        # ==========================================
+        # ENDPOINT
+        # ==========================================
 
         url = (
             f"{self.base_url}"
             f"{self.model}"
         )
 
-        # ------------------------------------------
-        # Request payload
-        # ------------------------------------------
+        # ==========================================
+        # REQUEST PAYLOAD
+        # ==========================================
 
         payload = {
-            "inputs": prompt,
+            "inputs": final_prompt,
+
             "parameters": {
+
                 "width": width,
+
                 "height": height,
+
                 "num_inference_steps": 4
+
             }
         }
 
+        # ==========================================
+        # API REQUEST
+        # ==========================================
+
         response = await fetch(
+
             url,
+
             method="POST",
+
             headers={
+
                 "Authorization":
                     f"Bearer {self.api_key}",
 
@@ -104,47 +124,57 @@ class HuggingFaceImageProvider(ImageProvider):
 
                 "Accept":
                     "image/png"
+
             },
-            body=self._json_dumps(payload)
+
+            body=json.dumps(
+                payload,
+                ensure_ascii=False
+            )
+
         )
 
-        # ------------------------------------------
-        # Error handling
-        # ------------------------------------------
+        # ==========================================
+        # ERROR HANDLING
+        # ==========================================
 
         if not response.ok:
 
             error_text = await response.text()
 
             raise RuntimeError(
+
                 f"Hugging Face Image API error "
                 f"{response.status}: "
                 f"{error_text}"
+
             )
 
-        # ------------------------------------------
-        # Read generated image bytes
-        # ------------------------------------------
+        # ==========================================
+        # READ IMAGE BYTES
+        # ==========================================
 
-        image_bytes = await response.array_buffer()
+        image_buffer = (
+            await response.array_buffer()
+        )
 
-        if not image_bytes:
+        if not image_buffer:
 
             raise RuntimeError(
                 "Hugging Face returned empty image data."
             )
 
-        # ------------------------------------------
-        # Convert bytes → Base64
-        # ------------------------------------------
+        # ==========================================
+        # CONVERT TO BASE64
+        # ==========================================
 
         image_data = base64.b64encode(
-            bytes(image_bytes)
+            bytes(image_buffer)
         ).decode("ascii")
 
-        # ------------------------------------------
-        # Determine MIME type
-        # ------------------------------------------
+        # ==========================================
+        # MIME TYPE
+        # ==========================================
 
         mime_type = (
             response.headers.get(
@@ -153,11 +183,14 @@ class HuggingFaceImageProvider(ImageProvider):
             or "image/png"
         )
 
-        # Remove charset if present
         mime_type = mime_type.split(
             ";",
             1
         )[0].strip()
+
+        # ==========================================
+        # RESULT
+        # ==========================================
 
         return {
 
@@ -178,13 +211,5 @@ class HuggingFaceImageProvider(ImageProvider):
 
             "data":
                 image_data
+
         }
-
-    def _json_dumps(self, data):
-
-        import json
-
-        return json.dumps(
-            data,
-            ensure_ascii=False
-        )
