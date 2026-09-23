@@ -14,12 +14,16 @@ class GeminiProvider:
     def __init__(self, env):
         self.env = env
 
-        self.api_key = getattr(env, "GEMINI_API_KEY", None)
+        self.api_key = getattr(
+            env,
+            "GEMINI_API_KEY",
+            None
+        )
 
         self.model = getattr(
             env,
             "GEMINI_MODEL",
-            "gemini-3.6-flash"
+            "gemini-3.5-flash-lite"
         )
 
         self.base_url = (
