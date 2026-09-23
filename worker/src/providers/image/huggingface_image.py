@@ -8,13 +8,11 @@ from .base import ImageProvider
 
 class HuggingFaceImageProvider(ImageProvider):
     """
-    Hugging Face Inference Providers
-    - Hugging Face token authentication
-    - Fal AI provider
-    - FLUX.1-schnell image generation
+    Hugging Face Inference Providers image provider.
 
-    Cloudflare Python Workers compatible.
-    Does not use huggingface_hub SDK.
+    Uses a Hugging Face token with Fal AI routing and
+    FLUX.1-schnell. Does not import huggingface_hub,
+    keeping the Cloudflare Python Worker lightweight.
     """
 
     name = "huggingface"
@@ -22,146 +20,86 @@ class HuggingFaceImageProvider(ImageProvider):
     def __init__(self, env):
         self.env = env
 
-        # ---------------------------------
-        # HUGGING FACE API KEY
-        # ---------------------------------
-
         self.api_key = getattr(
             env,
             "HUGGINGFACE_API_KEY",
-            None
+            None,
         )
 
-        # ---------------------------------
-        # HUGGING FACE MODEL ID
-        # ---------------------------------
-
+        # Hugging Face model ID.
         self.model = getattr(
             env,
             "HUGGINGFACE_IMAGE_MODEL",
-            "black-forest-labs/FLUX.1-schnell"
+            "black-forest-labs/FLUX.1-schnell",
         )
 
-        # ---------------------------------
-        # PROVIDER
-        # ---------------------------------
-
+        # Hugging Face Inference Provider.
         self.provider = getattr(
             env,
             "HUGGINGFACE_IMAGE_PROVIDER",
-            "fal-ai"
+            "fal-ai",
         )
 
-        # ---------------------------------
-        # FAL PROVIDER MODEL ID
-        #
-        # This is NOT the same as the
-        # Hugging Face model ID.
-        # ---------------------------------
-
+        # Provider-specific Fal model ID.
         self.provider_model = getattr(
             env,
             "HUGGINGFACE_PROVIDER_MODEL",
-            "fal-ai/flux/schnell"
+            "fal-ai/flux/schnell",
         )
 
-        # ---------------------------------
-        # HUGGING FACE ROUTER
-        # ---------------------------------
+        self.base_url = "https://router.huggingface.co"
 
-        self.base_url = (
-            "https://router.huggingface.co"
-        )
+    def _get_image_size(self, aspect_ratio):
+        if aspect_ratio == "16:9":
+            return 1344, 768
+
+        if aspect_ratio == "1:1":
+            return 1024, 1024
+
+        # Default: vertical 9:16
+        return 768, 1344
 
     async def generate(
         self,
         prompt,
         aspect_ratio="9:16",
-        reference_images=None
+        reference_images=None,
     ):
-        # =================================
-        # VALIDATION
-        # =================================
-
         if not self.api_key:
             raise RuntimeError(
                 "HUGGINGFACE_API_KEY is not configured."
             )
 
-        if not prompt:
+        if not prompt or not str(prompt).strip():
             raise ValueError(
                 "Image prompt is required."
             )
 
-        # =================================
-        # IMAGE SIZE
-        # =================================
+        width, height = self._get_image_size(
+            aspect_ratio
+        )
 
-        width = 768
-        height = 1344
-
-        if aspect_ratio == "16:9":
-            width = 1344
-            height = 768
-
-        elif aspect_ratio == "1:1":
-            width = 1024
-            height = 1024
-
-        # =================================
-        # HUGGING FACE → FAL ROUTER
-        # =================================
+        # Hugging Face provider routing:
+        # /fal-ai/{provider_model}
         #
-        # IMPORTANT:
-        #
-        # Hugging Face model:
-        # black-forest-labs/FLUX.1-schnell
-        #
-        # Provider model:
+        # Final URL:
+        # https://router.huggingface.co/fal-ai/
         # fal-ai/flux/schnell
-        #
-        # Router path:
-        # /fal-ai/fal-ai/flux/schnell
-        #
-        # This follows the provider routing
-        # structure used by Hugging Face.
-        #
-
         url = (
             f"{self.base_url}"
             f"/fal-ai/"
             f"{self.provider_model}"
         )
 
-        # =================================
-        # FAL PAYLOAD
-        # =================================
-        #
-        # Fal text-to-image expects:
-        #
-        # prompt
-        # image_size
-        #
-        # NOT:
-        # inputs
-        #
-        # The Hugging Face provider adapter
-        # converts width + height into
-        # image_size for Fal.
-        #
-
+        # Fal text-to-image payload.
         payload = {
-            "prompt": prompt,
+            "prompt": str(prompt),
             "image_size": {
                 "width": width,
-                "height": height
+                "height": height,
             },
-            "num_inference_steps": 4
+            "num_inference_steps": 4,
         }
-
-        # =================================
-        # REQUEST
-        # =================================
 
         response = await fetch(
             url,
@@ -171,17 +109,13 @@ class HuggingFaceImageProvider(ImageProvider):
                     f"Bearer {self.api_key}"
                 ),
                 "Content-Type": "application/json",
-                "Accept": "application/json"
+                "Accept": "application/json",
             },
             body=json.dumps(
                 payload,
-                ensure_ascii=False
-            )
+                ensure_ascii=False,
+            ),
         )
-
-        # =================================
-        # RESPONSE ERROR
-        # =================================
 
         if not response.ok:
             error_text = await response.text()
@@ -192,68 +126,63 @@ class HuggingFaceImageProvider(ImageProvider):
                 f"{error_text}"
             )
 
-        # =================================
-        # PARSE FAL RESPONSE
-        # =================================
-
         try:
             result = await response.json()
-
         except Exception:
-            response_text = await response.text()
+            raw_text = await response.text()
 
             raise RuntimeError(
                 "Hugging Face/Fal returned "
                 "an invalid JSON response: "
-                f"{response_text}"
+                f"{raw_text}"
             )
 
-        # =================================
-        # FIND IMAGE URL
-        # =================================
-
-        try:
-            image_url = (
-                result["images"][0]["url"]
-            )
-
-        except (
-            KeyError,
-            IndexError,
-            TypeError
-        ):
+        if not isinstance(result, dict):
             raise RuntimeError(
-                "Hugging Face/Fal response "
-                "does not contain an image URL. "
+                "Hugging Face/Fal returned an "
+                "unexpected response object."
+            )
+
+        images = result.get("images")
+
+        if not isinstance(images, list) or not images:
+            raise RuntimeError(
+                "Hugging Face/Fal response does not "
+                "contain an images array. "
                 f"Response: {json.dumps(result)}"
             )
 
-        if not image_url:
+        first_image = images[0]
+
+        if not isinstance(first_image, dict):
             raise RuntimeError(
-                "Hugging Face/Fal returned "
-                "an empty image URL."
+                "Hugging Face/Fal returned an invalid "
+                "image object."
             )
 
-        # =================================
-        # DOWNLOAD GENERATED IMAGE
-        # =================================
+        image_url = first_image.get("url")
+
+        if not image_url:
+            raise RuntimeError(
+                "Hugging Face/Fal response does not "
+                "contain an image URL. "
+                f"Response: {json.dumps(result)}"
+            )
 
         image_response = await fetch(
             image_url,
             method="GET",
             headers={
-                "Accept": "image/*"
-            }
+                "Accept": "image/*",
+            },
         )
 
         if not image_response.ok:
-            image_error = (
-                await image_response.text()
-            )
+            image_error = await image_response.text()
 
             raise RuntimeError(
-                "Failed to download generated "
-                "image from Fal: "
+                "Failed to download generated image "
+                "from provider: "
                 f"{image_response.status}: "
                 f"{image_error}"
             )
@@ -267,17 +196,9 @@ class HuggingFaceImageProvider(ImageProvider):
                 "Generated image is empty."
             )
 
-        # =================================
-        # BASE64
-        # =================================
-
         image_data = base64.b64encode(
             bytes(image_buffer)
         ).decode("ascii")
-
-        # =================================
-        # MIME TYPE
-        # =================================
 
         mime_type = (
             image_response.headers.get(
@@ -288,12 +209,8 @@ class HuggingFaceImageProvider(ImageProvider):
 
         mime_type = mime_type.split(
             ";",
-            1
+            1,
         )[0].strip()
-
-        # =================================
-        # RESULT
-        # =================================
 
         return {
             "provider": self.name,
@@ -302,8 +219,6 @@ class HuggingFaceImageProvider(ImageProvider):
             "provider_model": self.provider_model,
             "mime_type": mime_type,
             "aspect_ratio": aspect_ratio,
-            "image_size": (
-                f"{width}x{height}"
-            ),
-            "data": image_data
+            "image_size": f"{width}x{height}",
+            "data": image_data,
         }
